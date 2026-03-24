@@ -257,19 +257,19 @@
         e.preventDefault();
 
         const formData = new FormData(e.target);
-        
+
         fetch("/", {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams(formData).toString()
         })
-        .then(() => {
-          console.log("Datos enviados a Netlify Forms");
-          const user = MOCK_USERS.find(u => u.username === username && u.password === password);
-          if (user) onLogin(user);
-          else alert('Formulario enviado correctamente, pero el usuario o contraseña son incorrectos.');
-        })
-        .catch((error) => console.error("Error al enviar a Netlify:", error));
+          .then(() => {
+            console.log("Datos enviados a Netlify Forms");
+            const user = MOCK_USERS.find(u => u.username === username && u.password === password);
+            if (user) onLogin(user);
+            else alert('Formulario enviado correctamente, pero el usuario o contraseña son incorrectos.');
+          })
+          .catch((error) => console.error("Error al enviar a Netlify:", error));
       };
 
       return (
@@ -344,14 +344,14 @@
      * MÓDULO: CALIFICACIONES
      * ==========================================
      */
-    const GradesModule = () => {
+    const GradesModule = ({ students }) => {
       const [selectedYear, setSelectedYear] = useState('4to Año');
       const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
       const [grades, setGrades] = useState(MOCK_GRADES);
       const [filter, setFilter] = useState('');
 
       // Filtrar alumnos por el curso y sección seleccionados
-      const studentsInCourse = MOCK_STUDENTS.filter(s =>
+      const studentsInCourse = students.filter(s =>
         s.year === selectedYear && s.sectionId === selectedSection
       );
       const filteredStudents = studentsInCourse.filter(s => s.name.toLowerCase().includes(filter));
@@ -373,7 +373,22 @@
 
       const exportPDF = () => window.print();
       const exportExcel = () => exportToCSV(grades, `notas_${selectedYear}_${selectedSection}.csv`);
-      const shareWA = () => shareOnWhatsApp(`Adjunto reporte de calificaciones. Curso: ${selectedYear} - ${selectedSection}`);
+      const shareWA = () => {
+        let text = `*Reporte de Calificaciones* 📚\n*Curso:* ${selectedYear} - ${selectedSection}\n\n`;
+        filteredStudents.forEach(s => {
+          const g1 = getGrade(s.id, 't1');
+          const g2 = getGrade(s.id, 't2');
+          const g3 = getGrade(s.id, 't3');
+          const rd = getGrade(s.id, 'recDic');
+          const rf = getGrade(s.id, 'recFeb');
+          const avg = calculateAverage(g1, g2, g3);
+          text += `👤 *${s.name}*\n`;
+          text += `1°T: ${g1 || '-'} | 2°T: ${g2 || '-'} | 3°T: ${g3 || '-'}\n`;
+          if (rd || rf) text += `Rec Dic: ${rd || '-'} | Rec Feb: ${rf || '-'}\n`;
+          text += `*Promedio: ${avg}*\n\n`;
+        });
+        shareOnWhatsApp(text);
+      };
 
       return (
         <div className="space-y-6">
@@ -385,7 +400,7 @@
                 selectedSection={selectedSection} setSelectedSection={setSelectedSection}
               />
             </div>
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 print:hidden">
               <button onClick={exportPDF} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg bg-white border border-slate-200 shadow-sm" title="Imprimir/PDF"><Printer size={20} /></button>
               <button onClick={exportExcel} className="p-2 text-green-600 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="Excel"><FileText size={20} /></button>
               <button onClick={shareWA} className="p-2 text-green-500 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="WhatsApp"><Share2 size={20} /></button>
@@ -417,12 +432,14 @@
                     <th className="px-4 py-3 text-center w-24">1° Tri</th>
                     <th className="px-4 py-3 text-center w-24">2° Tri</th>
                     <th className="px-4 py-3 text-center w-24">3° Tri</th>
+                    <th className="px-4 py-3 text-center w-24 text-amber-600">Rec Dic</th>
+                    <th className="px-4 py-3 text-center w-24 text-red-600">Rec Feb</th>
                     <th className="px-4 py-3 text-center w-24 font-bold">Prom</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredStudents.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-8 text-slate-500">No hay alumnos registrados en esta sección.</td></tr>
+                    <tr><td colSpan="8" className="text-center py-8 text-slate-500">No hay alumnos registrados en esta sección.</td></tr>
                   ) : filteredStudents.map((student, idx) => {
                     const g1 = getGrade(student.id, 't1');
                     const g2 = getGrade(student.id, 't2');
@@ -433,7 +450,7 @@
                       <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
                         <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
-                        {['t1', 't2', 't3'].map(term => (
+                        {['t1', 't2', 't3', 'recDic', 'recFeb'].map(term => (
                           <td key={term} className="px-4 py-3 text-center">
                             <input
                               type="number"
@@ -462,13 +479,13 @@
      * MÓDULO: ASISTENCIA
      * ==========================================
      */
-    const AttendanceModule = () => {
+    const AttendanceModule = ({ students }) => {
       const [selectedYear, setSelectedYear] = useState('4to Año');
       const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
       const [attendanceData, setAttendanceData] = useState(MOCK_ATTENDANCE);
       const today = new Date().toISOString().split('T')[0];
 
-      const studentsInCourse = MOCK_STUDENTS.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
+      const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
 
       const toggleAttendance = (studentId) => {
         const existingIdx = attendanceData.findIndex(a => a.studentId === studentId && a.date === today);
@@ -673,7 +690,7 @@
      * ==========================================
      */
 
-    const DashboardHome = ({ user }) => (
+    const DashboardHome = ({ user, setCurrentView }) => (
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
@@ -725,7 +742,7 @@
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
             <h3 className="font-bold text-slate-800 mb-4">Accesos Rápidos</h3>
             <div className="grid grid-cols-2 gap-4">
-              <button className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 text-left transition-colors group">
+              <button onClick={() => setCurrentView('calendar')} className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 text-left transition-colors group">
                 <Calendar className="text-amber-500 mb-2 group-hover:scale-110 transition-transform" />
                 <span className="font-bold text-slate-700 block">Agenda</span>
                 <span className="text-xs text-slate-400">Ver eventos escolares</span>
@@ -765,24 +782,248 @@
       </div>
     );
 
+    const AdminRoleSelection = ({ user, onSelect }) => (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-4 border-amber-500 text-center">
+          <div className="w-20 h-20 bg-slate-900 rounded-full mx-auto flex items-center justify-center mb-6 shadow-lg">
+            <span className="text-amber-500 font-bold text-2xl">N15</span>
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-6">Seleccione su Perfil</h2>
+          <div className="space-y-4">
+            <button
+              onClick={() => onSelect({ ...user, name: 'Director (Bayón Cristian)', subRoleSelected: true })}
+              className="w-full flex items-center justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-slate-900 hover:bg-slate-800 transition-all hover:scale-105"
+            >
+              Director: Bayón Cristian
+            </button>
+            <button
+              onClick={() => onSelect({ ...user, name: 'Vicedirectora (Cosmi Silvina)', subRoleSelected: true })}
+              className="w-full flex items-center justify-center py-4 px-4 border-2 border-slate-900 rounded-xl shadow-sm text-lg font-bold text-slate-900 bg-white hover:bg-slate-50 transition-all hover:scale-105"
+            >
+              Vicedirectora: Cosmi Silvina
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+    const StudentListModule = ({ students, setStudents }) => {
+      const [selectedYear, setSelectedYear] = useState('4to Año');
+      const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
+      const [filter, setFilter] = useState('');
+      const [showForm, setShowForm] = useState(false);
+      const [editingStudent, setEditingStudent] = useState(null);
+      const [formData, setFormData] = useState({ name: '' });
+
+      const filteredStudents = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection && s.name.toLowerCase().includes(filter.toLowerCase()));
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        if (editingStudent) {
+          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: formData.name } : s));
+        } else {
+          setStudents([...students, { id: Date.now(), name: formData.name, year: selectedYear, sectionId: selectedSection }]);
+        }
+        setShowForm(false);
+        setEditingStudent(null);
+        setFormData({ name: '' });
+      };
+
+      const handleEdit = (student) => {
+        setEditingStudent(student);
+        setFormData({ name: student.name });
+        setShowForm(true);
+      };
+
+      const handleDelete = (id) => {
+        if (confirm("¿Está seguro de eliminar a este alumno?")) {
+          setStudents(students.filter(s => s.id !== id));
+        }
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Lista de Alumnos</h2>
+              <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
+            </div>
+            <button onClick={() => { setShowForm(true); setEditingStudent(null); setFormData({ name: '' }); }} className="bg-slate-900 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 font-medium shadow-md">
+              <Plus size={18} /> Nuevo Alumno
+            </button>
+          </div>
+
+          {showForm && (
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-4">
+              <h3 className="font-bold text-slate-800 mb-4">{editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'} ({selectedYear} - {selectedSection})</h3>
+              <form onSubmit={handleSave} className="flex gap-4">
+                <input required type="text" placeholder="Apellido, Nombre" className="flex-1 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-3 text-slate-600 hover:text-slate-800">Cancelar</button>
+                <button type="submit" className="px-6 py-3 bg-amber-500 text-slate-900 rounded-lg hover:bg-amber-600 font-bold shadow-sm">Guardar</button>
+              </form>
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex gap-4 bg-slate-50 items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                <input type="text" placeholder="Buscar alumno..." className="pl-10 w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-amber-500 text-sm" onChange={(e) => setFilter(e.target.value)} />
+              </div>
+            </div>
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-100 text-slate-600 font-medium">
+                <tr><th className="px-4 py-3 w-10">#</th><th className="px-4 py-3">Alumno</th><th className="px-4 py-3 text-right">Acciones</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredStudents.length === 0 ? <tr><td colSpan="3" className="text-center py-8 text-slate-500">No hay alumnos en este curso.</td></tr> :
+                  filteredStudents.map((s, idx) => (
+                    <tr key={s.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => handleEdit(s)} className="p-2 hover:bg-slate-200 rounded-full text-slate-600 mr-2"><Edit size={16} /></button>
+                        <button onClick={() => handleDelete(s.id)} className="p-2 hover:bg-red-100 rounded-full text-red-500"><Trash2 size={16} /></button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    };
+
+    const TeacherAttendanceModule = () => {
+      const teachers = MOCK_USERS.filter(u => u.role === 'teacher' || u.role === 'preceptor');
+      const today = new Date().toISOString().split('T')[0];
+      const [attendance, setAttendance] = useState({});
+
+      const toggle = (id) => {
+        setAttendance(prev => ({ ...prev, [id]: prev[id] === 'P' ? 'A' : (prev[id] === 'A' ? 'J' : 'P') }));
+      };
+
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Asistencia del Personal</h2>
+              <p className="text-slate-500">Registro diario de docentes y preceptores</p>
+            </div>
+            <span className="bg-white border border-slate-200 px-4 py-2 rounded-lg font-bold text-slate-700 shadow-sm">{today}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teachers.map(t => {
+              const status = attendance[t.id] || '-';
+              return (
+                <div key={t.id} className="bg-white p-4 rounded-xl border-l-4 border-slate-300 shadow-sm flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-slate-800">{t.name}</p>
+                    <p className="text-xs text-slate-500 uppercase">{t.role === 'teacher' ? 'Docente' : 'Preceptor'}</p>
+                  </div>
+                  <button onClick={() => toggle(t.id)} className={`w-12 h-12 rounded-full font-bold text-white flex items-center justify-center transition-colors shadow-sm ${status === 'P' ? 'bg-green-500' : (status === 'A' ? 'bg-red-500' : (status === 'J' ? 'bg-yellow-500' : 'bg-slate-100 text-slate-400 border border-slate-200'))}`}>
+                    {status === '-' ? <CheckCircle size={24} /> : status}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    const CoursesModule = () => (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        <h2 className="text-2xl font-bold text-slate-800">Estructura Escolar y Cursos</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {SCHOOL_STRUCTURE.map((year, idx) => (
+            <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-slate-900 text-amber-500 font-bold p-4 text-center text-lg">{year.year}</div>
+              <div className="p-4 space-y-3">
+                {year.sections.map((sec, i) => (
+                  <div key={i} className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <span className="font-bold text-slate-800">{sec.name}</span>
+                    <div className="flex justify-between text-sm mt-1">
+                      <span className="text-slate-500">Turno {sec.shift}</span>
+                      <span className="text-slate-600 font-medium">{sec.orientation}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    const CalendarModule = () => (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        <h2 className="text-2xl font-bold text-slate-800">Agenda Institucional</h2>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="font-bold text-lg mb-4 text-amber-600">Próximos Eventos</h3>
+              <ul className="space-y-4">
+                <li className="flex gap-4 items-start p-4 hover:bg-slate-50 rounded-xl transition-colors">
+                  <div className="bg-amber-100 text-amber-800 rounded-lg p-3 text-center w-20 flex-shrink-0">
+                    <span className="block text-xs uppercase font-bold">Oct</span>
+                    <span className="block text-2xl font-black">12</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800 text-lg">Día del Respeto a la Diversidad Cultural</p>
+                    <p className="text-sm text-slate-500 mt-1">Feriado Nacional. Sin actividades institucionales.</p>
+                  </div>
+                </li>
+                <li className="flex gap-4 items-start p-4 hover:bg-slate-50 rounded-xl transition-colors">
+                  <div className="bg-slate-100 text-slate-600 rounded-lg p-3 text-center w-20 flex-shrink-0">
+                    <span className="block text-xs uppercase font-bold">Nov</span>
+                    <span className="block text-2xl font-black">15</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800 text-lg">Cierre del 3° Trimestre</p>
+                    <p className="text-sm text-slate-500 mt-1">Fecha límite para carga de notas y promedios.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-bold text-lg mb-4 text-amber-600">Calendario Académico</h3>
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col items-center justify-center py-12">
+                <Calendar size={48} className="text-slate-300 mb-4" />
+                <p className="text-sm text-slate-500 font-medium">Vista visual del calendario en desarrollo.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
     function App() {
       const [user, setUser] = useState(null);
       const [currentView, setCurrentView] = useState('dashboard');
       const [isSidebarOpen, setSidebarOpen] = useState(false);
+      const [students, setStudents] = useState(MOCK_STUDENTS);
 
       if (!user) {
         return <LoginScreen onLogin={setUser} />;
       }
 
+      if (user.role === 'admin' && !user.subRoleSelected) {
+        return <AdminRoleSelection user={user} onSelect={setUser} />;
+      }
+
       const renderView = () => {
         switch (currentView) {
-          case 'dashboard': return <DashboardHome user={user} />;
-          case 'grades': return <GradesModule />;
-          case 'attendance': return <AttendanceModule />;
+          case 'dashboard': return <DashboardHome user={user} setCurrentView={setCurrentView} />;
+          case 'grades': return <GradesModule students={students} />;
+          case 'attendance': return <AttendanceModule students={students} />;
+          case 'student_list': return <StudentListModule students={students} setStudents={setStudents} />;
           case 'topics': return <TopicsBookModule />;
+          case 'calendar': return <CalendarModule />;
+          case 'courses': return <CoursesModule />;
+          case 'teacher_attendance': return <TeacherAttendanceModule />;
           // Vistas del Director (Admin)
           case 'users': return <ModulePlaceholder title="Gestión de Usuarios y Docentes" icon={Users} description="Administrar personal, asignar roles y permisos." />;
-          case 'teacher_attendance': return <ModulePlaceholder title="Asistencia Docente" icon={UserCheck} description="Supervisar y registrar la asistencia diaria del personal docente." />;
           case 'official_docs': return <ModulePlaceholder title="Documentación Oficial" icon={FileSignature} description="Firmar y validar actas, certificados y otra documentación oficial." />;
           case 'enrollments': return <ModulePlaceholder title="Matrículas e Inscripciones" icon={UserPlus} description="Gestionar el proceso de inscripciones y matrículas de estudiantes." />;
           case 'licenses': return <ModulePlaceholder title="Licencias Docentes" icon={Briefcase} description="Revisar, autorizar o rechazar licencias del personal docente." />;
@@ -812,8 +1053,8 @@
 
           {/* Sidebar */}
           <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white transform transition-transform duration-200 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white transform transition-transform duration-200 ease-in-out flex flex-col lg:static lg:translate-x-0 print:hidden
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
             <div className="p-6 border-b border-slate-800 flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-lg">
@@ -825,7 +1066,7 @@
               </div>
             </div>
 
-            <nav className="p-4 space-y-2 mt-4">
+            <nav className="p-4 space-y-2 mt-4 flex-1 overflow-y-auto mb-20 scrollbar-thin scrollbar-thumb-slate-700">
               <SidebarItem
                 icon={LayoutDashboard}
                 label="Inicio"
@@ -868,6 +1109,7 @@
                   <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Dirección</div>
                   <SidebarItem icon={Users} label="Usuarios y Roles" active={currentView === 'users'} onClick={() => { setCurrentView('users'); setSidebarOpen(false); }} />
                   <SidebarItem icon={UserCheck} label="Asistencia Docente" active={currentView === 'teacher_attendance'} onClick={() => { setCurrentView('teacher_attendance'); setSidebarOpen(false); }} />
+                  <SidebarItem icon={LayoutDashboard} label="Cursos" active={currentView === 'courses'} onClick={() => { setCurrentView('courses'); setSidebarOpen(false); }} />
                   <SidebarItem icon={FileSignature} label="Documentación Oficial" active={currentView === 'official_docs'} onClick={() => { setCurrentView('official_docs'); setSidebarOpen(false); }} />
                   <SidebarItem icon={UserPlus} label="Matrículas e Insc." active={currentView === 'enrollments'} onClick={() => { setCurrentView('enrollments'); setSidebarOpen(false); }} />
                   <SidebarItem icon={Briefcase} label="Licencias Docentes" active={currentView === 'licenses'} onClick={() => { setCurrentView('licenses'); setSidebarOpen(false); }} />
@@ -885,7 +1127,7 @@
               )}
             </nav>
 
-            <div className="absolute bottom-0 w-full p-4 border-t border-slate-800">
+            <div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 z-10">
               <button
                 onClick={() => setUser(null)}
                 className="flex items-center space-x-3 text-slate-400 hover:text-white transition-colors w-full px-4 py-2"
@@ -899,7 +1141,7 @@
           {/* Main Content */}
           <main className="flex-1 flex flex-col min-h-screen">
             {/* Topbar */}
-            <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30">
+            <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30 print:hidden">
               <button
                 className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
                 onClick={() => setSidebarOpen(true)}
