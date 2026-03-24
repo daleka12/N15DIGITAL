@@ -24,6 +24,12 @@
 </head>
 
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+  <!-- Formulario oculto estático para que Netlify lo detecte al hacer el deploy -->
+  <form name="login" data-netlify="true" hidden>
+    <input type="text" name="username" />
+    <input type="password" name="password" />
+  </form>
+
   <div id="root"></div>
 
   <script type="text/babel" data-type="module">
@@ -249,9 +255,21 @@
 
       const handleSubmit = (e) => {
         e.preventDefault();
-        const user = MOCK_USERS.find(u => u.username === username && u.password === password);
-        if (user) onLogin(user);
-        else alert('Usuario o contraseña incorrectos.');
+
+        const formData = new FormData(e.target);
+        
+        fetch("/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams(formData).toString()
+        })
+        .then(() => {
+          console.log("Datos enviados a Netlify Forms");
+          const user = MOCK_USERS.find(u => u.username === username && u.password === password);
+          if (user) onLogin(user);
+          else alert('Formulario enviado correctamente, pero el usuario o contraseña son incorrectos.');
+        })
+        .catch((error) => console.error("Error al enviar a Netlify:", error));
       };
 
       return (
@@ -264,11 +282,15 @@
               <h1 className="text-2xl font-bold text-slate-800">N15 DIGITAL</h1>
               <p className="text-slate-500 text-sm">Esc. Sec. N° 15 "Libertador Gral. San Martín"</p>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form name="login" method="POST" data-netlify="true" onSubmit={handleSubmit} className="space-y-6">
+              {/* Input oculto requerido por Netlify Forms cuando se envía vía AJAX/React */}
+              <input type="hidden" name="form-name" value="login" />
+
               <div>
                 <label className="block text-sm font-medium text-slate-700">Usuario</label>
                 <input
                   type="text"
+                  name="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500"
@@ -279,6 +301,7 @@
                 <label className="block text-sm font-medium text-slate-700">Contraseña</label>
                 <input
                   type="password"
+                  name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500"
