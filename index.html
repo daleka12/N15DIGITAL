@@ -11,6 +11,9 @@
   <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+  <!-- html2pdf.js for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <!-- Configure ESM imports for Babel -->
   <script type="importmap">
     {
@@ -139,18 +142,16 @@
       { id: 1, name: 'Directivo', username: 'dire15', password: 'dire15MARTIN', role: 'admin' },
       { id: 2, name: 'Profesor', username: 'profe15', password: 'profe15SAN', role: 'teacher' },
       { id: 3, name: 'Preceptor', username: 'prece15', password: 'precep15GRAL', role: 'preceptor' },
+      { id: 4, name: 'Secretario', username: 'secre15', password: '123', role: 'secretario' },
     ];
 
     // Estudiantes adaptados a la nueva estructura
     const MOCK_STUDENTS = [
-      // 4to Año - Sec 1 Naturales
-      { id: 101, name: 'Alvarez, Mateo', year: '4to Año', sectionId: 'Sección 1 - Cs. Naturales' },
-      { id: 102, name: 'Benitez, Sofia', year: '4to Año', sectionId: 'Sección 1 - Cs. Naturales' },
-      { id: 103, name: 'Carrizo, Lucas', year: '4to Año', sectionId: 'Sección 1 - Cs. Naturales' },
-      // 4to Año - Sec 1 Sociales
-      { id: 104, name: 'Diaz, Valentina', year: '4to Año', sectionId: 'Sección 1 - Cs. Sociales y Humanidades' },
-      // 1er Año - Sec 1 Tarde
-      { id: 105, name: 'Fernandez, Juan', year: '1er Año', sectionId: 'Sección 1 - Ciclo Básico' },
+      { id: 101, name: 'Alvarez, Mateo', year: '4to Año', sectionId: 'Sección 1 - Cs. Naturales', document: '44555666', phone: '1122334455' },
+      { id: 102, name: 'Benitez, Sofia', year: '4to Año', sectionId: 'Sección 1 - Cs. Naturales', document: '45111222', phone: '1122334466' },
+      { id: 103, name: 'Carrizo, Lucas', year: '4to Año', sectionId: 'Sección 1 - Cs. Naturales', document: '45333444', phone: '1122334477' },
+      { id: 104, name: 'Diaz, Valentina', year: '4to Año', sectionId: 'Sección 1 - Cs. Sociales y Humanidades', document: '44222333', phone: '1122334488' },
+      { id: 105, name: 'Fernandez, Juan', year: '1er Año', sectionId: 'Sección 1 - Ciclo Básico', document: '46111222', phone: '1122334499' },
     ];
 
     // Asistencias iniciales (simuladas)
@@ -344,11 +345,24 @@
      * MÓDULO: CALIFICACIONES
      * ==========================================
      */
-    const GradesModule = ({ students }) => {
+    const GradesModule = ({ students, setStudents }) => {
       const [selectedYear, setSelectedYear] = useState('4to Año');
       const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
       const [grades, setGrades] = useState(MOCK_GRADES);
       const [filter, setFilter] = useState('');
+      const [showStudentForm, setShowStudentForm] = useState(false);
+      const [editingStudent, setEditingStudent] = useState(null);
+      const [studentForm, setStudentForm] = useState({ name: '' });
+
+      const handleSaveStudent = (e) => {
+        e.preventDefault();
+        if (editingStudent) {
+          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: studentForm.name } : s));
+        } else {
+          setStudents([...students, { id: Date.now(), name: studentForm.name, year: selectedYear, sectionId: selectedSection }]);
+        }
+        setShowStudentForm(false);
+      };
 
       // Filtrar alumnos por el curso y sección seleccionados
       const studentsInCourse = students.filter(s =>
@@ -401,11 +415,22 @@
               />
             </div>
             <div className="flex space-x-2 print:hidden">
+              <button onClick={() => { setEditingStudent(null); setStudentForm({ name: '' }); setShowStudentForm(true); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg bg-white border border-slate-200 shadow-sm font-bold flex items-center gap-1" title="Agregar Alumno"><Plus size={20} /><span className="text-sm hidden sm:inline">Alumno</span></button>
               <button onClick={exportPDF} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg bg-white border border-slate-200 shadow-sm" title="Imprimir/PDF"><Printer size={20} /></button>
               <button onClick={exportExcel} className="p-2 text-green-600 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="Excel"><FileText size={20} /></button>
-              <button onClick={shareWA} className="p-2 text-green-500 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="WhatsApp"><Share2 size={20} /></button>
+              <button onClick={shareWA} className="p-2 text-green-500 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="Compartir PDF por WhatsApp"><Share2 size={20} /></button>
             </div>
           </div>
+
+          {showStudentForm && (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4 animate-in fade-in slide-in-from-top-4 print:hidden">
+              <form onSubmit={handleSaveStudent} className="flex gap-4 items-center">
+                <input required placeholder="Apellido, Nombre" className="flex-1 p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} />
+                <button type="button" onClick={() => setShowStudentForm(false)} className="px-4 py-2 text-slate-600">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-amber-500 text-slate-900 rounded-lg font-bold">Guardar</button>
+              </form>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex gap-4 bg-slate-50 items-center">
@@ -428,7 +453,7 @@
                 <thead className="bg-slate-100 text-slate-600 font-medium">
                   <tr>
                     <th className="px-4 py-3 w-10">#</th>
-                    <th className="px-4 py-3">Alumno</th>
+                    <th className="px-4 py-3 min-w-[150px]">Alumno</th>
                     <th className="px-4 py-3 text-center w-24">1° Tri</th>
                     <th className="px-4 py-3 text-center w-24">2° Tri</th>
                     <th className="px-4 py-3 text-center w-24">3° Tri</th>
@@ -449,7 +474,10 @@
                     return (
                       <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
+                        <td className="px-4 py-3 font-medium text-slate-800 flex items-center justify-between">
+                          <span>{student.name}</span>
+                          <button onClick={() => { setEditingStudent(student); setStudentForm({ name: student.name }); setShowStudentForm(true); }} className="text-slate-400 hover:text-amber-500 print:hidden ml-2"><Edit size={14} /></button>
+                        </td>
                         {['t1', 't2', 't3', 'recDic', 'recFeb'].map(term => (
                           <td key={term} className="px-4 py-3 text-center">
                             <input
@@ -480,15 +508,14 @@
      * ==========================================
      */
     const AttendanceModule = ({ students }) => {
+      const [selectedRole, setSelectedRole] = useState('students');
       const [selectedYear, setSelectedYear] = useState('4to Año');
       const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
       const [attendanceData, setAttendanceData] = useState(MOCK_ATTENDANCE);
       const today = new Date().toISOString().split('T')[0];
 
-      const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
-
-      const toggleAttendance = (studentId) => {
-        const existingIdx = attendanceData.findIndex(a => a.studentId === studentId && a.date === today);
+      const toggleAttendance = (itemId) => {
+        const existingIdx = attendanceData.findIndex(a => a.studentId === itemId && a.date === today);
         let newStatus = 'P';
 
         const newData = [...attendanceData];
@@ -497,75 +524,87 @@
           newStatus = current === 'P' ? 'A' : (current === 'A' ? 'J' : 'P');
           newData[existingIdx].status = newStatus;
         } else {
-          newData.push({ studentId, date: today, status: 'P' });
+          newData.push({ studentId: itemId, date: today, status: 'P' });
         }
         setAttendanceData(newData);
       };
 
-      const getStatus = (studentId) => {
-        const entry = attendanceData.find(a => a.studentId === studentId && a.date === today);
+      const getStatus = (itemId) => {
+        const entry = attendanceData.find(a => a.studentId === itemId && a.date === today);
         return entry ? entry.status : '-';
       };
 
-      const calculatePercentage = (studentId) => {
-        const records = attendanceData.filter(a => a.studentId === studentId);
+      const calculatePercentage = (itemId) => {
+        const records = attendanceData.filter(a => a.studentId === itemId);
         if (records.length === 0) return 100;
         const presents = records.filter(a => a.status === 'P' || a.status === 'J').length;
         return Math.round((presents / records.length) * 100);
       };
 
+      const renderList = () => {
+        let list = [];
+        if (selectedRole === 'students') {
+          list = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
+        } else {
+          list = MOCK_USERS.filter(u => u.role === selectedRole);
+        }
+
+        if (list.length === 0) return <div className="col-span-full text-center py-10 bg-white rounded-xl border border-slate-200 text-slate-500">No hay registros para este filtro.</div>;
+
+        return list.map(item => {
+          const status = getStatus(item.id);
+          const percent = calculatePercentage(item.id);
+          const isRisk = percent < 80;
+
+          return (
+            <div key={item.id} className={`bg-white p-4 rounded-xl border-l-4 shadow-sm flex items-center justify-between ${status === 'P' ? 'border-green-500' : (status === 'A' ? 'border-red-500' : (status === 'J' ? 'border-yellow-500' : 'border-slate-300'))}`}>
+              <div>
+                <h3 className="font-bold text-slate-800">{item.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isRisk ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    {percent}% Asist.
+                  </span>
+                  {selectedRole === 'students' && isRisk && <AlertTriangle size={14} className="text-red-500" title="Riesgo por inasistencias" />}
+                </div>
+              </div>
+
+              <button
+                onClick={() => toggleAttendance(item.id)}
+                className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white transition-all shadow-sm ${status === 'P' ? 'bg-green-500' : (status === 'A' ? 'bg-red-500' : (status === 'J' ? 'bg-yellow-500' : 'bg-slate-100 text-slate-400 border border-slate-200'))}`}
+              >
+                {status === '-' ? <CheckCircle size={24} /> : status}
+              </button>
+            </div>
+          );
+        });
+      };
+
       return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <div className="flex justify-between items-center mb-2">
-                <h2 className="text-2xl font-bold text-slate-800">Control de Asistencia</h2>
-                <span className="text-slate-500 font-medium text-sm border px-3 py-1 rounded-full bg-white">{today}</span>
+                <h2 className="text-2xl font-bold text-slate-800">Control de Asistencia General</h2>
+                <span className="text-slate-500 font-medium text-sm border px-3 py-1 rounded-full bg-white hidden sm:block">{today}</span>
               </div>
-              <CourseSelector
-                selectedYear={selectedYear} setSelectedYear={setSelectedYear}
-                selectedSection={selectedSection} setSelectedSection={setSelectedSection}
-              />
+              <div className="flex flex-wrap gap-2 mb-4 bg-slate-200 p-1 rounded-lg w-fit">
+                <button onClick={() => setSelectedRole('students')} className={`px-4 py-2 rounded-md text-sm font-bold transition-colors ${selectedRole === 'students' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Alumnos</button>
+                <button onClick={() => setSelectedRole('teacher')} className={`px-4 py-2 rounded-md text-sm font-bold transition-colors ${selectedRole === 'teacher' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Docentes</button>
+                <button onClick={() => setSelectedRole('preceptor')} className={`px-4 py-2 rounded-md text-sm font-bold transition-colors ${selectedRole === 'preceptor' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Preceptores</button>
+                <button onClick={() => setSelectedRole('secretario')} className={`px-4 py-2 rounded-md text-sm font-bold transition-colors ${selectedRole === 'secretario' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Secretarios</button>
+                <button onClick={() => setSelectedRole('admin')} className={`px-4 py-2 rounded-md text-sm font-bold transition-colors ${selectedRole === 'admin' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Directivos</button>
+              </div>
+              {selectedRole === 'students' && (
+                <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
+              )}
             </div>
             <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-bold">
-              <Save size={18} /> Guardar Planilla
+              <Save size={18} /> Guardar
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {studentsInCourse.length === 0 ? (
-              <div className="col-span-full text-center py-10 bg-white rounded-xl border border-slate-200 text-slate-500">
-                Seleccione una sección con alumnos para registrar asistencia.
-              </div>
-            ) : studentsInCourse.map(student => {
-              const status = getStatus(student.id);
-              const percent = calculatePercentage(student.id);
-              const isRisk = percent < 80;
-
-              return (
-                <div key={student.id} className={`bg-white p-4 rounded-xl border-l-4 shadow-sm flex items-center justify-between ${status === 'P' ? 'border-green-500' : (status === 'A' ? 'border-red-500' : (status === 'J' ? 'border-yellow-500' : 'border-slate-300'))
-                  }`}>
-                  <div>
-                    <h3 className="font-bold text-slate-800">{student.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isRisk ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                        }`}>
-                        {percent}% Asist.
-                      </span>
-                      {isRisk && <AlertTriangle size={14} className="text-red-500" title="Riesgo por inasistencias" />}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => toggleAttendance(student.id)}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white transition-all shadow-sm ${status === 'P' ? 'bg-green-500' : (status === 'A' ? 'bg-red-500' : (status === 'J' ? 'bg-yellow-500' : 'bg-slate-100 text-slate-400 border border-slate-200'))
-                      }`}
-                  >
-                    {status === '-' ? <CheckCircle size={24} /> : status}
-                  </button>
-                </div>
-              );
-            })}
+            {renderList()}
           </div>
 
           {/* Leyenda */}
@@ -813,25 +852,25 @@
       const [filter, setFilter] = useState('');
       const [showForm, setShowForm] = useState(false);
       const [editingStudent, setEditingStudent] = useState(null);
-      const [formData, setFormData] = useState({ name: '' });
+      const [formData, setFormData] = useState({ name: '', document: '', phone: '' });
 
       const filteredStudents = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection && s.name.toLowerCase().includes(filter.toLowerCase()));
 
       const handleSave = (e) => {
         e.preventDefault();
         if (editingStudent) {
-          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: formData.name } : s));
+          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: formData.name, document: formData.document, phone: formData.phone } : s));
         } else {
-          setStudents([...students, { id: Date.now(), name: formData.name, year: selectedYear, sectionId: selectedSection }]);
+          setStudents([...students, { id: Date.now(), name: formData.name, document: formData.document, phone: formData.phone, year: selectedYear, sectionId: selectedSection }]);
         }
         setShowForm(false);
         setEditingStudent(null);
-        setFormData({ name: '' });
+        setFormData({ name: '', document: '', phone: '' });
       };
 
       const handleEdit = (student) => {
         setEditingStudent(student);
-        setFormData({ name: student.name });
+        setFormData({ name: student.name, document: student.document || '', phone: student.phone || '' });
         setShowForm(true);
       };
 
@@ -848,7 +887,7 @@
               <h2 className="text-2xl font-bold text-slate-800 mb-2">Lista de Alumnos</h2>
               <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
             </div>
-            <button onClick={() => { setShowForm(true); setEditingStudent(null); setFormData({ name: '' }); }} className="bg-slate-900 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 font-medium shadow-md">
+            <button onClick={() => { setShowForm(true); setEditingStudent(null); setFormData({ name: '', document: '', phone: '' }); }} className="bg-slate-900 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 font-medium shadow-md">
               <Plus size={18} /> Nuevo Alumno
             </button>
           </div>
@@ -856,8 +895,10 @@
           {showForm && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-4">
               <h3 className="font-bold text-slate-800 mb-4">{editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'} ({selectedYear} - {selectedSection})</h3>
-              <form onSubmit={handleSave} className="flex gap-4">
+              <form onSubmit={handleSave} className="flex flex-col md:flex-row gap-4">
                 <input required type="text" placeholder="Apellido, Nombre" className="flex-1 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                <input type="text" placeholder="N° Documento" className="flex-1 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.document} onChange={e => setFormData({ ...formData, document: e.target.value })} />
+                <input type="text" placeholder="Teléfono" className="flex-1 p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-3 text-slate-600 hover:text-slate-800">Cancelar</button>
                 <button type="submit" className="px-6 py-3 bg-amber-500 text-slate-900 rounded-lg hover:bg-amber-600 font-bold shadow-sm">Guardar</button>
               </form>
@@ -871,91 +912,167 @@
                 <input type="text" placeholder="Buscar alumno..." className="pl-10 w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-amber-500 text-sm" onChange={(e) => setFilter(e.target.value)} />
               </div>
             </div>
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-100 text-slate-600 font-medium">
-                <tr><th className="px-4 py-3 w-10">#</th><th className="px-4 py-3">Alumno</th><th className="px-4 py-3 text-right">Acciones</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredStudents.length === 0 ? <tr><td colSpan="3" className="text-center py-8 text-slate-500">No hay alumnos en este curso.</td></tr> :
-                  filteredStudents.map((s, idx) => (
-                    <tr key={s.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
-                      <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => handleEdit(s)} className="p-2 hover:bg-slate-200 rounded-full text-slate-600 mr-2"><Edit size={16} /></button>
-                        <button onClick={() => handleDelete(s.id)} className="p-2 hover:bg-red-100 rounded-full text-red-500"><Trash2 size={16} /></button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 text-slate-600 font-medium">
+                  <tr>
+                    <th className="px-4 py-3 w-10">#</th>
+                    <th className="px-4 py-3">Alumno</th>
+                    <th className="px-4 py-3 text-center">Documento</th>
+                    <th className="px-4 py-3 text-center">Teléfono</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredStudents.length === 0 ? <tr><td colSpan="5" className="text-center py-8 text-slate-500">No hay alumnos en este curso.</td></tr> :
+                    filteredStudents.map((s, idx) => (
+                      <tr key={s.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{s.document || '-'}</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{s.phone || '-'}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button onClick={() => handleEdit(s)} className="p-2 hover:bg-slate-200 rounded-full text-slate-600 mr-2"><Edit size={16} /></button>
+                          <button onClick={() => handleDelete(s.id)} className="p-2 hover:bg-red-100 rounded-full text-red-500"><Trash2 size={16} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       );
     };
 
-    const TeacherAttendanceModule = () => {
-      const teachers = MOCK_USERS.filter(u => u.role === 'teacher' || u.role === 'preceptor');
-      const today = new Date().toISOString().split('T')[0];
-      const [attendance, setAttendance] = useState({});
+    const AssignmentsModule = ({ students }) => {
+      const [selectedYear, setSelectedYear] = useState('4to Año');
+      const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
+      const [assignments, setAssignments] = useState([]);
+      const [filter, setFilter] = useState('');
 
-      const toggle = (id) => {
-        setAttendance(prev => ({ ...prev, [id]: prev[id] === 'P' ? 'A' : (prev[id] === 'A' ? 'J' : 'P') }));
+      const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
+      const filteredStudents = studentsInCourse.filter(s => s.name.toLowerCase().includes(filter));
+
+      const getGrade = (studentId, term) => {
+        const g = assignments.find(x => x.studentId === studentId);
+        return g ? g[term] || '' : '';
+      };
+
+      const handleGradeChange = (studentId, term, value) => {
+        const newAsg = [...assignments];
+        const index = newAsg.findIndex(g => g.studentId === studentId);
+        if (index >= 0) newAsg[index][term] = value;
+        else newAsg.push({ studentId, [term]: value });
+        setAssignments(newAsg);
       };
 
       return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div className="flex flex-col md:flex-row justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Asistencia del Personal</h2>
-              <p className="text-slate-500">Registro diario de docentes y preceptores</p>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Trabajos Prácticos</h2>
+              <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
             </div>
-            <span className="bg-white border border-slate-200 px-4 py-2 rounded-lg font-bold text-slate-700 shadow-sm">{today}</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teachers.map(t => {
-              const status = attendance[t.id] || '-';
-              return (
-                <div key={t.id} className="bg-white p-4 rounded-xl border-l-4 border-slate-300 shadow-sm flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-slate-800">{t.name}</p>
-                    <p className="text-xs text-slate-500 uppercase">{t.role === 'teacher' ? 'Docente' : 'Preceptor'}</p>
-                  </div>
-                  <button onClick={() => toggle(t.id)} className={`w-12 h-12 rounded-full font-bold text-white flex items-center justify-center transition-colors shadow-sm ${status === 'P' ? 'bg-green-500' : (status === 'A' ? 'bg-red-500' : (status === 'J' ? 'bg-yellow-500' : 'bg-slate-100 text-slate-400 border border-slate-200'))}`}>
-                    {status === '-' ? <CheckCircle size={24} /> : status}
-                  </button>
-                </div>
-              );
-            })}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex gap-4 bg-slate-50 items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                <input type="text" placeholder="Buscar alumno..." className="pl-10 w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-amber-500 text-sm" onChange={(e) => setFilter(e.target.value.toLowerCase())} />
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 text-slate-600 font-medium">
+                  <tr>
+                    <th className="px-4 py-3 w-10">#</th>
+                    <th className="px-4 py-3 min-w-[150px]">Alumno</th>
+                    <th className="px-4 py-3 text-center w-24">TP 1</th>
+                    <th className="px-4 py-3 text-center w-24">TP 2</th>
+                    <th className="px-4 py-3 text-center w-24">TP 3</th>
+                    <th className="px-4 py-3 text-center w-24 text-amber-600">Rec Dic</th>
+                    <th className="px-4 py-3 text-center w-24 text-red-600">Rec Feb</th>
+                    <th className="px-4 py-3 text-center w-24 font-bold">Prom</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredStudents.length === 0 ? <tr><td colSpan="8" className="text-center py-8 text-slate-500">No hay alumnos registrados.</td></tr> :
+                    filteredStudents.map((student, idx) => {
+                      const g1 = getGrade(student.id, 'tp1');
+                      const g2 = getGrade(student.id, 'tp2');
+                      const g3 = getGrade(student.id, 'tp3');
+                      const avg = calculateAverage(g1, g2, g3);
+                      return (
+                        <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
+                          <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
+                          {['tp1', 'tp2', 'tp3', 'recDic', 'recFeb'].map(term => (
+                            <td key={term} className="px-4 py-3 text-center">
+                              <input type="number" min="1" max="10" className="w-16 p-2 rounded-lg border border-slate-200 text-center mx-auto focus:ring-2 focus:ring-amber-500 outline-none" value={getGrade(student.id, term)} onChange={e => handleGradeChange(student.id, term, e.target.value)} />
+                            </td>
+                          ))}
+                          <td className="px-4 py-3 text-center font-bold text-slate-800">{avg}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       );
     };
 
-    const CoursesModule = () => (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-        <h2 className="text-2xl font-bold text-slate-800">Estructura Escolar y Cursos</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {SCHOOL_STRUCTURE.map((year, idx) => (
-            <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-slate-900 text-amber-500 font-bold p-4 text-center text-lg">{year.year}</div>
-              <div className="p-4 space-y-3">
-                {year.sections.map((sec, i) => (
-                  <div key={i} className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <span className="font-bold text-slate-800">{sec.name}</span>
-                    <div className="flex justify-between text-sm mt-1">
-                      <span className="text-slate-500">Turno {sec.shift}</span>
-                      <span className="text-slate-600 font-medium">{sec.orientation}</span>
+    const ObservationsModule = ({ students }) => {
+      const [selectedYear, setSelectedYear] = useState('4to Año');
+      const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
+      const [observations, setObservations] = useState({});
+      const [filter, setFilter] = useState('');
+
+      const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
+      const filteredStudents = studentsInCourse.filter(s => s.name.toLowerCase().includes(filter));
+
+      const handleChange = (id, text) => {
+        setObservations(prev => ({ ...prev, [id]: text }));
+      };
+
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Observaciones Académicas</h2>
+              <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex gap-4 bg-slate-50 items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                <input type="text" placeholder="Buscar alumno..." className="pl-10 w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:border-amber-500 text-sm" onChange={(e) => setFilter(e.target.value.toLowerCase())} />
+              </div>
+            </div>
+            <div className="p-4 space-y-4">
+              {filteredStudents.length === 0 ? <p className="text-center py-8 text-slate-500">No hay alumnos registrados.</p> :
+                filteredStudents.map((s, idx) => (
+                  <div key={s.id} className="border border-slate-200 rounded-lg p-4 bg-slate-50 relative">
+                    <h3 className="font-bold text-slate-800 mb-2">{idx + 1}. {s.name}</h3>
+                    <textarea
+                      placeholder="Escribir observaciones o notas relevantes..."
+                      className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm resize-y min-h-[80px] bg-white"
+                      value={observations[s.id] || ''}
+                      onChange={e => handleChange(s.id, e.target.value)}
+                    ></textarea>
+                    <div className="absolute top-4 right-4 text-slate-400">
+                      <Save size={18} className={observations[s.id] ? "text-amber-500" : "text-transparent"} />
                     </div>
                   </div>
                 ))}
-              </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-    );
-
+      );
+    };
     const CalendarModule = () => (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
         <h2 className="text-2xl font-bold text-slate-800">Agenda Institucional</h2>
@@ -998,6 +1115,161 @@
       </div>
     );
 
+    const OfficialDocsModule = () => {
+      const [docs, setDocs] = useState([]);
+      const [title, setTitle] = useState('');
+      const [content, setContent] = useState('');
+
+      const handleAddDoc = (e) => {
+        e.preventDefault();
+        setDocs([{ id: Date.now(), title, content, date: new Date().toISOString().split('T')[0] }, ...docs]);
+        setTitle('');
+        setContent('');
+      };
+
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <h2 className="text-2xl font-bold text-slate-800">Documentación Oficial</h2>
+          <form onSubmit={handleAddDoc} className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col gap-4 shadow-sm">
+            <input required type="text" placeholder="Título del Documento o Acta" className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={title} onChange={e => setTitle(e.target.value)} />
+            <textarea required placeholder="Escribir contenido..." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none h-32" value={content} onChange={e => setContent(e.target.value)}></textarea>
+            <div className="flex justify-between items-center">
+              <button type="button" onClick={() => alert('Simulación: Se abriría cuadro de sistema para elegir foto/PDF.')} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex gap-2">Subir Foto/PDF</button>
+              <button type="submit" className="bg-amber-500 text-slate-900 font-bold px-6 py-2 rounded-lg shadow-sm">Guardar Documento</button>
+            </div>
+          </form>
+          <div className="grid gap-4">
+            {docs.map(d => (
+              <div key={d.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-bold text-slate-800">{d.title}</h3>
+                  <span className="text-sm text-slate-500">{d.date}</span>
+                </div>
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">{d.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const EnrollmentsModule = () => {
+      const [enrollments, setEnrollments] = useState([]);
+      const [formData, setFormData] = useState({ name: '', document: '', phone: '', email: '' });
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        setEnrollments([{ id: Date.now(), ...formData, status: 'Pendiente' }, ...enrollments]);
+        setFormData({ name: '', document: '', phone: '', email: '' });
+      };
+
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <h2 className="text-2xl font-bold text-slate-800">Matrículas e Inscripciones</h2>
+          <form onSubmit={handleSave} className="bg-white p-6 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
+            <h3 className="col-span-full font-bold text-slate-800 mb-2">Nueva Solicitud de Inscripción</h3>
+            <input required type="text" placeholder="Apellido, Nombre del Alumno" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+            <input required type="text" placeholder="N° Documento" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.document} onChange={e => setFormData({ ...formData, document: e.target.value })} />
+            <input required type="text" placeholder="Teléfono de Contacto" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+            <input type="email" placeholder="Correo Electrónico (Opcional)" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+            <button type="submit" className="col-span-full mt-2 bg-amber-500 text-slate-900 font-bold px-6 py-3 rounded-lg shadow-sm">Registrar Inscripción</button>
+          </form>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 text-slate-600 font-medium">
+                  <tr>
+                    <th className="px-4 py-3">Aspirante</th>
+                    <th className="px-4 py-3">Documento</th>
+                    <th className="px-4 py-3">Contacto</th>
+                    <th className="px-4 py-3 text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {enrollments.length === 0 ? <tr><td colSpan="4" className="text-center py-8 text-slate-500">No hay inscripciones registradas.</td></tr> :
+                    enrollments.map(e => (
+                      <tr key={e.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-800">{e.name}</td>
+                        <td className="px-4 py-3 text-slate-600">{e.document}</td>
+                        <td className="px-4 py-3 text-slate-600">{e.phone} {e.email && `| ${e.email}`}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer select-none transition-colors ${e.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`} onClick={() => {
+                            setEnrollments(enrollments.map(en => en.id === e.id ? { ...en, status: en.status === 'Pendiente' ? 'Matriculado' : 'Pendiente' } : en));
+                          }}>{e.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const LicensesModule = () => {
+      const [licenses, setLicenses] = useState([]);
+      const [formData, setFormData] = useState({ firstName: '', lastName: '', document: '', address: '', phone: '' });
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        setLicenses([{ id: Date.now(), ...formData, status: 'Pendiente' }, ...licenses]);
+        setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' });
+        alert('Simulación: El PDF se adjuntó correctamente a la solicitud.');
+      };
+
+      const updateStatus = (id, newStatus) => {
+        setLicenses(licenses.map(lic => lic.id === id ? { ...lic, status: newStatus } : lic));
+      };
+
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <h2 className="text-2xl font-bold text-slate-800">Licencias Docentes</h2>
+          <form onSubmit={handleSave} className="bg-white p-6 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
+            <h3 className="col-span-full font-bold text-slate-800 mb-2">Cargar Nueva Solicitud de Licencia</h3>
+            <input required type="text" placeholder="Nombre" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} />
+            <input required type="text" placeholder="Apellido" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} />
+            <input required type="text" placeholder="N° Documento" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.document} onChange={e => setFormData({ ...formData, document: e.target.value })} />
+            <input required type="text" placeholder="N° Celular" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+            <input required type="text" placeholder="Dirección" className="col-span-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+            <div className="col-span-full flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 gap-4">
+              <button type="button" className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg text-sm font-bold flex gap-2 w-fit border border-slate-200 shadow-sm" onClick={() => alert('Simulación: Diálogo de selección de archivo PDF para adjuntar certificado.')}>Adjuntar Certificado (PDF)</button>
+              <button type="submit" className="bg-amber-500 text-slate-900 font-bold px-8 py-3 rounded-lg shadow-sm w-full sm:w-auto">Agregar Licencia</button>
+            </div>
+          </form>
+
+          <div className="grid grid-cols-1 gap-4">
+            {licenses.length === 0 ? <p className="text-center py-8 text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">No hay licencias cargadas.</p> :
+              licenses.map(lic => (
+                <div key={lic.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-slate-800 text-lg">{lic.lastName}, {lic.firstName}</h3>
+                    <p className="text-sm text-slate-500 mt-1">DNI: <span className="font-semibold text-slate-700">{lic.document}</span> | Celular: {lic.phone}</p>
+                    <p className="text-sm text-slate-500">Dirección: {lic.address}</p>
+                    <div className="mt-2 text-sm text-amber-600 font-bold underline cursor-pointer hover:text-amber-700 w-fit" onClick={() => alert('Simulación: Abriendo PDF visualizador.')}>Ver PDF adjunto</div>
+                  </div>
+                  <div className="flex flex-col items-start md:items-center gap-2">
+                    {lic.status === 'Pendiente' ? (
+                      <>
+                        <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Decisión</span>
+                        <div className="flex gap-2">
+                          <button onClick={() => updateStatus(lic.id, 'Autorizada')} className="bg-green-100 text-green-700 hover:bg-green-200 p-3 rounded-full shadow-sm transition-transform hover:scale-105" title="Autorizar"><CheckCircle size={24} /></button>
+                          <button onClick={() => updateStatus(lic.id, 'Rechazada')} className="bg-red-100 text-red-700 hover:bg-red-200 p-3 rounded-full shadow-sm transition-transform hover:scale-105" title="Rechazar"><XCircle size={24} /></button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className={`px-4 py-2 font-bold rounded-lg text-center shadow-sm border ${lic.status === 'Autorizada' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                        {lic.status}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      );
+    };
+
     function App() {
       const [user, setUser] = useState(null);
       const [currentView, setCurrentView] = useState('dashboard');
@@ -1019,24 +1291,18 @@
           case 'attendance': return <AttendanceModule students={students} />;
           case 'student_list': return <StudentListModule students={students} setStudents={setStudents} />;
           case 'topics': return <TopicsBookModule />;
-          case 'calendar': return <CalendarModule />;
-          case 'courses': return <CoursesModule />;
-          case 'teacher_attendance': return <TeacherAttendanceModule />;
-          // Vistas del Director (Admin)
-          case 'users': return <ModulePlaceholder title="Gestión de Usuarios y Docentes" icon={Users} description="Administrar personal, asignar roles y permisos." />;
-          case 'official_docs': return <ModulePlaceholder title="Documentación Oficial" icon={FileSignature} description="Firmar y validar actas, certificados y otra documentación oficial." />;
-          case 'enrollments': return <ModulePlaceholder title="Matrículas e Inscripciones" icon={UserPlus} description="Gestionar el proceso de inscripciones y matrículas de estudiantes." />;
-          case 'licenses': return <ModulePlaceholder title="Licencias Docentes" icon={Briefcase} description="Revisar, autorizar o rechazar licencias del personal docente." />;
+          case 'official_docs': return <OfficialDocsModule />;
+          case 'enrollments': return <EnrollmentsModule />;
+          case 'licenses': return <LicensesModule />;
           // Vistas del Preceptor
           case 'daily_attendance': return <ModulePlaceholder title="Asistencia y Novedades" icon={ClipboardCheck} description="Registrar asistencia diaria, tardanzas, retiros anticipados y justificar inasistencias." />;
           case 'daily_report': return <ModulePlaceholder title="Parte Diario" icon={ClipboardList} description="Administrar el parte diario del curso y verificar la presencia del profesor en el aula." />;
           case 'discipline': return <ModulePlaceholder title="Sanciones y Disciplina" icon={ShieldAlert} description="Registrar sanciones, llamados de atención y reportes de conducta." />;
           case 'communications': return <ModulePlaceholder title="Comunicaciones" icon={MessageSquare} description="Comunicar novedades a las familias y coordinar con Docentes y Directivos." />;
           // Vistas del Docente (Añadidas a las académicas iniciales)
-          case 'student_list': return <ModulePlaceholder title="Lista de Alumnos" icon={UserSquare2} description="Ver y exportar las listas de alumnos por materia y curso asignado." />;
-          case 'assignments': return <ModulePlaceholder title="Trabajos Prácticos" icon={ListTodo} description="Registrar y realizar seguimiento de los trabajos prácticos asignados." />;
-          case 'observations': return <ModulePlaceholder title="Observaciones Académicas" icon={Lightbulb} description="Agregar y consultar observaciones académicas y conductuales de los alumnos." />;
-          default: return <DashboardHome user={user} />;
+          case 'assignments': return <AssignmentsModule students={students} />;
+          case 'observations': return <ObservationsModule students={students} />;
+          default: return <DashboardHome user={user} setCurrentView={setCurrentView} />;
         }
       };
 
@@ -1066,7 +1332,7 @@
               </div>
             </div>
 
-            <nav className="p-4 space-y-2 mt-4 flex-1 overflow-y-auto mb-20 scrollbar-thin scrollbar-thumb-slate-700">
+            <nav className="p-4 space-y-2 mt-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
               <SidebarItem
                 icon={LayoutDashboard}
                 label="Inicio"
@@ -1108,8 +1374,6 @@
                 <>
                   <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Dirección</div>
                   <SidebarItem icon={Users} label="Usuarios y Roles" active={currentView === 'users'} onClick={() => { setCurrentView('users'); setSidebarOpen(false); }} />
-                  <SidebarItem icon={UserCheck} label="Asistencia Docente" active={currentView === 'teacher_attendance'} onClick={() => { setCurrentView('teacher_attendance'); setSidebarOpen(false); }} />
-                  <SidebarItem icon={LayoutDashboard} label="Cursos" active={currentView === 'courses'} onClick={() => { setCurrentView('courses'); setSidebarOpen(false); }} />
                   <SidebarItem icon={FileSignature} label="Documentación Oficial" active={currentView === 'official_docs'} onClick={() => { setCurrentView('official_docs'); setSidebarOpen(false); }} />
                   <SidebarItem icon={UserPlus} label="Matrículas e Insc." active={currentView === 'enrollments'} onClick={() => { setCurrentView('enrollments'); setSidebarOpen(false); }} />
                   <SidebarItem icon={Briefcase} label="Licencias Docentes" active={currentView === 'licenses'} onClick={() => { setCurrentView('licenses'); setSidebarOpen(false); }} />
@@ -1127,7 +1391,7 @@
               )}
             </nav>
 
-            <div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 z-10">
+            <div className="w-full p-4 border-t border-slate-800 bg-slate-900">
               <button
                 onClick={() => setUser(null)}
                 className="flex items-center space-x-3 text-slate-400 hover:text-white transition-colors w-full px-4 py-2"
