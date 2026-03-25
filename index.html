@@ -1520,7 +1520,6 @@
           case 'licenses': return <LicensesModule />;
           case 'calendar': return <CalendarModule />;
           // Vistas del Preceptor
-          case 'daily_attendance': return <AttendanceModule students={students} usersData={usersData} setUsersData={setUsersData} initialRole="teacher" />;
           case 'daily_report': return <DailyReportModule />;
           case 'discipline': return <DisciplineModule students={students} />;
           case 'communications': return <CommunicationsModule setNotifications={setNotifications} />;
@@ -1608,7 +1607,6 @@
               {user.role === 'preceptor' && (
                 <>
                   <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Gestión Diaria</div>
-                  <SidebarItem icon={ClipboardCheck} label="Asist. y Novedades" active={currentView === 'daily_attendance'} onClick={() => { setCurrentView('daily_attendance'); setSidebarOpen(false); }} />
                   <SidebarItem icon={ClipboardList} label="Parte Diario" active={currentView === 'daily_report'} onClick={() => { setCurrentView('daily_report'); setSidebarOpen(false); }} />
                   <SidebarItem icon={ShieldAlert} label="Disciplina" active={currentView === 'discipline'} onClick={() => { setCurrentView('discipline'); setSidebarOpen(false); }} />
                   <SidebarItem icon={MessageSquare} label="Comunicaciones" active={currentView === 'communications'} onClick={() => { setCurrentView('communications'); setSidebarOpen(false); }} />
