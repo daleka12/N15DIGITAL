@@ -45,7 +45,7 @@
       FileText, Search, Plus, Trash2, Edit, ChevronDown, LayoutDashboard,
       UserCheck, FileSignature, UserPlus, Briefcase,
       ClipboardCheck, ClipboardList, ShieldAlert, MessageSquare,
-      ListTodo, UserSquare2, Lightbulb
+      ListTodo, UserSquare2, Lightbulb, Send, Camera
     } from 'lucide-react';
 
 
@@ -1611,7 +1611,6 @@
                   <SidebarItem icon={ClipboardCheck} label="Asist. y Novedades" active={currentView === 'daily_attendance'} onClick={() => { setCurrentView('daily_attendance'); setSidebarOpen(false); }} />
                   <SidebarItem icon={ClipboardList} label="Parte Diario" active={currentView === 'daily_report'} onClick={() => { setCurrentView('daily_report'); setSidebarOpen(false); }} />
                   <SidebarItem icon={ShieldAlert} label="Disciplina" active={currentView === 'discipline'} onClick={() => { setCurrentView('discipline'); setSidebarOpen(false); }} />
-                  <SidebarItem icon={BookOpen} label="Libro de Temas" active={currentView === 'topics'} onClick={() => { setCurrentView('topics'); setSidebarOpen(false); }} />
                   <SidebarItem icon={MessageSquare} label="Comunicaciones" active={currentView === 'communications'} onClick={() => { setCurrentView('communications'); setSidebarOpen(false); }} />
                   <SidebarItem icon={Calendar} label="Calendario" active={currentView === 'calendar'} onClick={() => { setCurrentView('calendar'); setSidebarOpen(false); }} />
                 </>
