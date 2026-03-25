@@ -141,8 +141,8 @@
     const MOCK_USERS = [
       { id: 101, name: 'Director: Bayón Cristian', username: 'dire15', password: 'dire15MARTIN', role: 'admin' },
       { id: 102, name: 'Vicedirectora: Cosmi Silvina', username: 'vice15', password: 'vice15SIL', role: 'admin' },
-      { id: 103, name: 'Profesor 1', username: 'profe1', password: 'profe15SAN', role: 'teacher' },
-      ...Array.from({ length: 9 }).map((_, i) => ({ id: 201 + i, name: `Preceptor ${i + 1}`, username: `prece${i + 1}`, password: '123', role: 'preceptor' })),
+      { id: 103, name: 'Profesor 1', username: 'profe15', password: 'profe15SAN', role: 'teacher' },
+      ...Array.from({ length: 9 }).map((_, i) => ({ id: 201 + i, name: `Preceptor ${i + 1}`, username: i === 0 ? 'prece15' : `prece${i + 1}`, password: i === 0 ? 'precep15GRAL' : '123', role: 'preceptor' })),
       ...Array.from({ length: 9 }).map((_, i) => ({ id: 301 + i, name: `Secretario ${i + 1}`, username: `secre${i + 1}`, password: '123', role: 'secretario' }))
     ];
 
