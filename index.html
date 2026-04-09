@@ -207,7 +207,7 @@
         const sum = nums.reduce((a, b) => a + b, 0);
         finalAvg = (sum / nums.length).toFixed(1);
       }
-      
+
       if (!isNaN(rf)) return rf.toFixed(1);
       if (!isNaN(rd)) return rd.toFixed(1);
       return finalAvg;
@@ -586,7 +586,7 @@
                     <button onClick={() => { setEditingUser(item); setEditName(item.name); setShowUserForm(true); }} className="text-slate-400 hover:text-amber-500"><Edit size={14} /></button>
                   )}
                   {selectedRole === 'teacher' && (
-                    <button onClick={() => { if(confirm("¿Eliminar docente?")) setUsersData(usersData.filter(u => u.id !== item.id)); }} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                    <button onClick={() => { if (confirm("¿Eliminar docente?")) setUsersData(usersData.filter(u => u.id !== item.id)); }} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
@@ -628,12 +628,12 @@
               )}
             </div>
             <div className="flex items-center gap-4">
-               {selectedRole === 'teacher' && (
-                 <button onClick={() => { setEditingUser(null); setEditName(''); setShowUserForm(true); }} className="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm">+ Docente</button>
-               )}
-               <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-bold">
-                 <Save size={18} /> Guardar
-               </button>
+              {selectedRole === 'teacher' && (
+                <button onClick={() => { setEditingUser(null); setEditName(''); setShowUserForm(true); }} className="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm">+ Docente</button>
+              )}
+              <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-bold">
+                <Save size={18} /> Guardar
+              </button>
             </div>
           </div>
 
@@ -646,8 +646,8 @@
             }} className="bg-slate-100 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-4 mb-4 border border-slate-300 shadow-sm animate-in fade-in slide-in-from-top-4">
               <input required type="text" placeholder="Nombre completo" className="flex-1 w-full p-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-amber-500" value={editName} onChange={e => setEditName(e.target.value)} />
               <div className="flex gap-2 w-full sm:w-auto">
-                 <button type="submit" className="flex-1 sm:flex-none bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-lg">Guardar</button>
-                 <button type="button" onClick={() => setShowUserForm(false)} className="flex-1 sm:flex-none bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-lg hover:bg-slate-300">Cancelar</button>
+                <button type="submit" className="flex-1 sm:flex-none bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded-lg">Guardar</button>
+                <button type="button" onClick={() => setShowUserForm(false)} className="flex-1 sm:flex-none bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-lg hover:bg-slate-300">Cancelar</button>
               </div>
             </form>
           )}
@@ -822,33 +822,33 @@
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
             <h3 className="font-bold text-slate-800 mb-4">Actividad Reciente</h3>
             <ul className="space-y-4">
-              {notifications.length > 0 ? notifications.slice(0,5).map(n => (
+              {notifications.length > 0 ? notifications.slice(0, 5).map(n => (
                 <li key={n.id} className="flex flex-col gap-1 text-sm border-b border-slate-100 pb-2">
                   <div className="flex items-center justify-between">
-                     <span className="text-xs font-bold text-amber-500 uppercase">{n.to === 'todos' ? 'General' : n.to}</span>
-                     <span className="text-xs text-slate-400">{n.date}</span>
+                    <span className="text-xs font-bold text-amber-500 uppercase">{n.to === 'todos' ? 'General' : n.to}</span>
+                    <span className="text-xs text-slate-400">{n.date}</span>
                   </div>
                   <span className="text-slate-800 font-medium">{n.message}</span>
                 </li>
-             )) : (
-              <>
-                <li className="flex items-center gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <span className="text-slate-500">10:45 AM</span>
-                  <span className="text-slate-800">Prof. García cargó notas de 4to Año - Sec 1</span>
-                </li>
-                <li className="flex items-center gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-slate-500">09:30 AM</span>
-                  <span className="text-slate-800">Preceptor Lopez cerró asistencia 5to Año</span>
-                </li>
-                <li className="flex items-center gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <span className="text-slate-500">08:15 AM</span>
-                  <span className="text-slate-800">Alerta: Bajo rendimiento detectado (3 alumnos)</span>
-                </li>
-              </>
-             )}
+              )) : (
+                <>
+                  <li className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    <span className="text-slate-500">10:45 AM</span>
+                    <span className="text-slate-800">Prof. García cargó notas de 4to Año - Sec 1</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="text-slate-500">09:30 AM</span>
+                    <span className="text-slate-800">Preceptor Lopez cerró asistencia 5to Año</span>
+                  </li>
+                  <li className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span className="text-slate-500">08:15 AM</span>
+                    <span className="text-slate-800">Alerta: Bajo rendimiento detectado (3 alumnos)</span>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 
@@ -1091,7 +1091,7 @@
                           ))}
                           <td className="px-4 py-3 text-center font-bold text-slate-800">{avg}</td>
                           <td className="px-4 py-3 text-center">
-                             <button onClick={() => alert('Simulación: Diálogo para adjuntar foto de TP.')} className="p-2 bg-slate-100 hover:bg-amber-100 text-slate-400 hover:text-amber-600 rounded-full transition-colors" title="Adjuntar foto de TP"><Camera size={16} /></button>
+                            <button onClick={() => alert('Simulación: Diálogo para adjuntar foto de TP.')} className="p-2 bg-slate-100 hover:bg-amber-100 text-slate-400 hover:text-amber-600 rounded-full transition-colors" title="Adjuntar foto de TP"><Camera size={16} /></button>
                           </td>
                         </tr>
                       );
@@ -1142,7 +1142,7 @@
                   <div key={s.id} className="border border-slate-200 rounded-lg p-4 bg-slate-50 relative">
                     <h3 className="font-bold text-slate-800 mb-2">{idx + 1}. {s.name}</h3>
                     <div className="flex flex-col gap-2">
-                      <select 
+                      <select
                         className="p-2 rounded-lg border border-slate-300 outline-none text-sm bg-white focus:ring-2 focus:ring-amber-500 w-fit font-medium text-slate-700"
                         value={observations[s.id]?.type || 'Generales'}
                         onChange={e => handleChangeType(s.id, e.target.value)}
@@ -1159,7 +1159,7 @@
                       ></textarea>
                     </div>
                     <div className="absolute top-4 right-4 text-slate-400 z-10">
-                      <Save size={18} className={observations[s.id]?.text ? "text-amber-500 cursor-pointer hover:scale-110 transition-transform" : "text-transparent"} onClick={() => { if(observations[s.id]?.text) alert('Nota guardada exitosamente.'); }} title="Guardar nota" />
+                      <Save size={18} className={observations[s.id]?.text ? "text-amber-500 cursor-pointer hover:scale-110 transition-transform" : "text-transparent"} onClick={() => { if (observations[s.id]?.text) alert('Nota guardada exitosamente.'); }} title="Guardar nota" />
                     </div>
                   </div>
                 ))}
@@ -1376,7 +1376,7 @@
       const [selectedYear, setSelectedYear] = useState('4to Año');
       const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
       const [note, setNote] = useState('');
-      
+
       return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <h2 className="text-2xl font-bold text-slate-800">Parte Diario</h2>
@@ -1389,7 +1389,7 @@
               onChange={e => setNote(e.target.value)}
             ></textarea>
             <div className="mt-4 flex justify-end">
-              <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-sm px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2" onClick={() => { if(note) { alert('Parte Diario guardado correctamente.'); setNote(''); } }}>
+              <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-sm px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2" onClick={() => { if (note) { alert('Parte Diario guardado correctamente.'); setNote(''); } }}>
                 <Save size={18} /> Guardar Parte
               </button>
             </div>
@@ -1421,11 +1421,11 @@
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <div className="flex flex-col md:flex-row justify-between gap-4">
             <div>
-               <h2 className="text-2xl font-bold text-slate-800 mb-2">Sanciones y Disciplina</h2>
-               <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Sanciones y Disciplina</h2>
+              <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
             </div>
             <div className="flex gap-2 print:hidden items-end">
-               <button onClick={() => window.print()} className="p-3 text-slate-600 hover:bg-slate-200 rounded-lg bg-white border border-slate-200 shadow-sm font-bold flex items-center gap-2" title="Guardar PDF"><Printer size={18} /> Guardar PDF</button>
+              <button onClick={() => window.print()} className="p-3 text-slate-600 hover:bg-slate-200 rounded-lg bg-white border border-slate-200 shadow-sm font-bold flex items-center gap-2" title="Guardar PDF"><Printer size={18} /> Guardar PDF</button>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1436,19 +1436,19 @@
               </div>
             </div>
             <div className="p-4 space-y-4">
-               {filteredStudents.length === 0 ? <p className="text-center py-8 text-slate-500">No hay alumnos registrados.</p> :
-                  filteredStudents.map((s, idx) => (
+              {filteredStudents.length === 0 ? <p className="text-center py-8 text-slate-500">No hay alumnos registrados.</p> :
+                filteredStudents.map((s, idx) => (
                   <div key={s.id} className="border border-slate-200 rounded-lg p-4 bg-slate-50 relative">
-                     <div className="flex justify-between items-center mb-2">
-                       <h3 className="font-bold text-slate-800">{idx + 1}. {s.name}</h3>
-                       <div className="flex gap-2">
-                         <button onClick={() => shareWA(s)} className="text-green-500 hover:text-green-600 p-2 bg-green-50 hover:bg-green-100 rounded-lg print:hidden flex items-center gap-2 text-sm font-bold transition-colors" title="Compartir WhatsApp"><Share2 size={16} /> WhatsApp</button>
-                         <button onClick={() => alert('Nota disciplinaria guardada para ' + s.name)} className="text-amber-500 hover:text-amber-600 p-2 bg-amber-50 hover:bg-amber-100 rounded-lg print:hidden transition-colors" title="Guardar"><Save size={16} /></button>
-                       </div>
-                     </div>
-                     <textarea placeholder="Escribir reporte de disciplina, amonestaciones, llamados de atención..." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm resize-y min-h-[80px] bg-white" value={observations[s.id] || ''} onChange={e => handleChangeText(s.id, e.target.value)}></textarea>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-bold text-slate-800">{idx + 1}. {s.name}</h3>
+                      <div className="flex gap-2">
+                        <button onClick={() => shareWA(s)} className="text-green-500 hover:text-green-600 p-2 bg-green-50 hover:bg-green-100 rounded-lg print:hidden flex items-center gap-2 text-sm font-bold transition-colors" title="Compartir WhatsApp"><Share2 size={16} /> WhatsApp</button>
+                        <button onClick={() => alert('Nota disciplinaria guardada para ' + s.name)} className="text-amber-500 hover:text-amber-600 p-2 bg-amber-50 hover:bg-amber-100 rounded-lg print:hidden transition-colors" title="Guardar"><Save size={16} /></button>
+                      </div>
+                    </div>
+                    <textarea placeholder="Escribir reporte de disciplina, amonestaciones, llamados de atención..." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm resize-y min-h-[80px] bg-white" value={observations[s.id] || ''} onChange={e => handleChangeText(s.id, e.target.value)}></textarea>
                   </div>
-               ))}
+                ))}
             </div>
           </div>
         </div>
@@ -1484,7 +1484,7 @@
                 <textarea required placeholder="Ej: Los alumnos del 4to Año no tendrán clases en las horas de Matemática..." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm min-h-[120px] bg-white" value={message} onChange={e => setMessage(e.target.value)}></textarea>
               </div>
               <button type="submit" className="bg-amber-500 text-slate-900 font-bold px-6 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-amber-600 transition-colors shadow-sm w-full md:w-auto self-end mt-2">
-                 <Send size={18} /> Publicar Comunicado
+                <Send size={18} /> Publicar Comunicado
               </button>
             </form>
           </div>
@@ -1511,7 +1511,7 @@
       const renderView = () => {
         switch (currentView) {
           case 'dashboard': return <DashboardHome user={user} setCurrentView={setCurrentView} notifications={notifications} />;
-          case 'grades': return <GradesModule students={students} />;
+          case 'grades': return <GradesModule students={students} setStudents={setStudents} />;
           case 'attendance': return <AttendanceModule students={students} usersData={usersData} setUsersData={setUsersData} />;
           case 'student_list': return <StudentListModule students={students} setStudents={setStudents} />;
           case 'topics': return <TopicsBookModule />;
