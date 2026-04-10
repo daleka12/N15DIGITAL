@@ -402,15 +402,28 @@
 
       const handleSaveStudent = async (e) => {
         e.preventDefault();
-        const payload = { name: studentForm.name, year: selectedYear, sectionId: selectedSection };
+        const payload = { name: studentForm.name, year: selectedYear, sectionId: selectedSection, document: '', phone: '' };
         if (USE_SUPABASE) {
+          let error = null;
           if (editingStudent) {
-            await supabase.from('students').update(payload).eq('id', editingStudent.id);
+            const res = await supabase.from('students').update(payload).eq('id', editingStudent.id);
+            error = res.error;
           } else {
-            await supabase.from('students').insert([payload]);
+            const res = await supabase.from('students').insert([payload]);
+            error = res.error;
           }
-          const { data } = await supabase.from('students').select('*');
-          if (data) setStudents(data);
+          
+          if (error) {
+            alert('Error al guardar alumno: ' + error.message);
+            return;
+          }
+
+          const { data, error: fetchError } = await supabase.from('students').select('*');
+          if (fetchError) {
+              alert('Error al recargar alumnos: ' + fetchError.message);
+          } else if (data) {
+              setStudents(data);
+          }
         } else {
           if (editingStudent) {
             setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: studentForm.name } : s));
