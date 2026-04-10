@@ -400,12 +400,23 @@
         alert('Calificaciones guardadas en la nube (Supabase).');
       };
 
-      const handleSaveStudent = (e) => {
+      const handleSaveStudent = async (e) => {
         e.preventDefault();
-        if (editingStudent) {
-          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: studentForm.name } : s));
+        const payload = { name: studentForm.name, year: selectedYear, sectionId: selectedSection };
+        if (USE_SUPABASE) {
+          if (editingStudent) {
+            await supabase.from('students').update(payload).eq('id', editingStudent.id);
+          } else {
+            await supabase.from('students').insert([payload]);
+          }
+          const { data } = await supabase.from('students').select('*');
+          if (data) setStudents(data);
         } else {
-          setStudents([...students, { id: Date.now(), name: studentForm.name, year: selectedYear, sectionId: selectedSection }]);
+          if (editingStudent) {
+            setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: studentForm.name } : s));
+          } else {
+            setStudents([...students, { id: Date.now(), name: studentForm.name, year: selectedYear, sectionId: selectedSection }]);
+          }
         }
         setShowStudentForm(false);
       };
@@ -696,10 +707,25 @@
           </div>
 
           {showUserForm && (
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
-              if (editingUser) setUsersData(usersData.map(u => u.id === editingUser.id ? { ...u, name: editName } : u));
-              else setUsersData([...usersData, { id: Date.now(), name: editName, role: selectedRole }]);
+              const payload = { name: editName, role: selectedRole };
+              if (USE_SUPABASE) {
+                if (editingUser) {
+                  await supabase.from('users').update(payload).eq('id', editingUser.id);
+                } else {
+                  // We need to provide dummy username and password for users since table requires it
+                  const randomCode = Math.floor(Math.random() * 1000);
+                  payload.username = `${selectedRole}_${randomCode}`;
+                  payload.password = `pass_${randomCode}`;
+                  await supabase.from('users').insert([payload]);
+                }
+                const { data } = await supabase.from('users').select('*');
+                if (data) setUsersData(data);
+              } else {
+                if (editingUser) setUsersData(usersData.map(u => u.id === editingUser.id ? { ...u, name: editName } : u));
+                else setUsersData([...usersData, { id: Date.now(), name: editName, role: selectedRole }]);
+              }
               setShowUserForm(false); setEditingUser(null);
             }} className="bg-slate-100 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-4 mb-4 border border-slate-300 shadow-sm animate-in fade-in slide-in-from-top-4">
               <input required type="text" placeholder="Nombre completo" className="flex-1 w-full p-2 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-amber-500" value={editName} onChange={e => setEditName(e.target.value)} />
