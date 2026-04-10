@@ -1148,8 +1148,31 @@
       const [assignments, setAssignments] = useState([]);
       const [filter, setFilter] = useState('');
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchAssignments() {
+          const { data } = await supabase.from('assignments').select('*');
+          if (data) setAssignments(data);
+        }
+        fetchAssignments();
+      }, []);
+
       const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
       const filteredStudents = studentsInCourse.filter(s => s.name.toLowerCase().includes(filter));
+
+      const handleSaveAllAssignments = async () => {
+        if (!USE_SUPABASE) {
+          alert('Notas guardadas localmente.');
+          return;
+        }
+        const toSave = assignments.filter(a => studentsInCourse.some(s => s.id === a.studentId));
+        for (const asg of toSave) {
+          const payload = { "studentId": asg.studentId, tp1: asg.tp1 || null, tp2: asg.tp2 || null, tp3: asg.tp3 || null, "recDic": asg.recDic || null, "recFeb": asg.recFeb || null };
+          if (asg.id) payload.id = asg.id;
+          await supabase.from('assignments').upsert(payload, { onConflict: '"studentId"' });
+        }
+        alert('Trabajos Prácticos guardados en la nube.');
+      };
 
       const getGrade = (studentId, term) => {
         const g = assignments.find(x => x.studentId === studentId);
@@ -1170,6 +1193,11 @@
             <div>
               <h2 className="text-2xl font-bold text-slate-800 mb-2">Trabajos Prácticos</h2>
               <CourseSelector selectedYear={selectedYear} setSelectedYear={setSelectedYear} selectedSection={selectedSection} setSelectedSection={setSelectedSection} />
+            </div>
+            <div className="flex gap-2 items-end">
+              <button onClick={handleSaveAllAssignments} className="bg-amber-500 text-slate-900 px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-amber-600 font-bold shadow-md">
+                <Save size={18} /> Guardar TPs
+              </button>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1233,8 +1261,36 @@
       const [observations, setObservations] = useState({});
       const [filter, setFilter] = useState('');
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchObservations() {
+          const { data } = await supabase.from('observations').select('*');
+          if (data) {
+            const obsMap = {};
+            data.forEach(d => {
+              obsMap[d.studentId] = { id: d.id, type: d.type, text: d.text };
+            });
+            setObservations(obsMap);
+          }
+        }
+        fetchObservations();
+      }, []);
+
       const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
       const filteredStudents = studentsInCourse.filter(s => s.name.toLowerCase().includes(filter));
+
+      const handleSaveObservation = async (studentId) => {
+        const obs = observations[studentId];
+        if (!obs || !obs.text) return;
+        if (!USE_SUPABASE) {
+          alert('Nota guardada exitosamente (Local).');
+          return;
+        }
+        const payload = { "studentId": studentId, type: obs.type || 'Generales', text: obs.text };
+        if (obs.id) payload.id = obs.id;
+        await supabase.from('observations').upsert(payload, { onConflict: '"studentId"' });
+        alert('Nota guardada en Supabase.');
+      };
 
       const handleChangeText = (id, text) => {
         setObservations(prev => ({ ...prev, [id]: { ...prev[id], text } }));
@@ -1282,7 +1338,7 @@
                       ></textarea>
                     </div>
                     <div className="absolute top-4 right-4 text-slate-400 z-10">
-                      <Save size={18} className={observations[s.id]?.text ? "text-amber-500 cursor-pointer hover:scale-110 transition-transform" : "text-transparent"} onClick={() => { if (observations[s.id]?.text) alert('Nota guardada exitosamente.'); }} title="Guardar nota" />
+                      <Save size={18} className={observations[s.id]?.text ? "text-amber-500 cursor-pointer hover:scale-110 transition-transform" : "text-transparent"} onClick={() => handleSaveObservation(s.id)} title="Guardar nota" />
                     </div>
                   </div>
                 ))}
@@ -1567,6 +1623,35 @@
       const [selectedSection, setSelectedSection] = useState('Sección 1 - Cs. Naturales');
       const [note, setNote] = useState('');
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchReport() {
+          const todayDate = new Date().toISOString().split('T')[0];
+          const { data } = await supabase.from('daily_reports')
+            .select('*')
+            .eq('year', selectedYear)
+            .eq('sectionId', selectedSection)
+            .eq('date', todayDate)
+            .maybeSingle(); // maybeSingle instead of single to prevent error if not found
+          if (data) setNote(data.note || '');
+          else setNote('');
+        }
+        fetchReport();
+      }, [selectedYear, selectedSection]);
+
+      const handleSaveReport = async () => {
+        if (!note) return;
+        if (!USE_SUPABASE) {
+          alert('Parte Diario guardado localmente.');
+          setNote('');
+          return;
+        }
+        const todayDate = new Date().toISOString().split('T')[0];
+        const payload = { year: selectedYear, sectionId: selectedSection, note, date: todayDate };
+        await supabase.from('daily_reports').upsert(payload, { onConflict: '"year", "sectionId", "date"' });
+        alert('Parte Diario guardado en Supabase.');
+      };
+
       return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <h2 className="text-2xl font-bold text-slate-800">Parte Diario</h2>
@@ -1579,7 +1664,7 @@
               onChange={e => setNote(e.target.value)}
             ></textarea>
             <div className="mt-4 flex justify-end">
-              <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-sm px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2" onClick={() => { if (note) { alert('Parte Diario guardado correctamente.'); setNote(''); } }}>
+              <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-sm px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2" onClick={handleSaveReport}>
                 <Save size={18} /> Guardar Parte
               </button>
             </div>
@@ -1594,11 +1679,36 @@
       const [observations, setObservations] = useState({});
       const [filter, setFilter] = useState('');
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchDiscipline() {
+          const { data } = await supabase.from('discipline').select('*');
+          if (data) {
+            const discMap = {};
+            data.forEach(d => { discMap[d.studentId] = d.note; });
+            setObservations(discMap);
+          }
+        }
+        fetchDiscipline();
+      }, []);
+
       const studentsInCourse = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection);
       const filteredStudents = studentsInCourse.filter(s => s.name.toLowerCase().includes(filter));
 
       const handleChangeText = (id, text) => {
         setObservations(prev => ({ ...prev, [id]: text }));
+      };
+
+      const handleSaveDiscipline = async (studentId) => {
+        const note = observations[studentId];
+        if (!note) return;
+        if (!USE_SUPABASE) {
+          alert('Nota disciplinaria guardada para el alumno (Local).');
+          return;
+        }
+        const payload = { "studentId": studentId, note };
+        await supabase.from('discipline').upsert(payload, { onConflict: '"studentId"' });
+        alert('Nota disciplinaria guardada en Supabase.');
       };
 
       const shareWA = (student) => {
@@ -1633,7 +1743,7 @@
                       <h3 className="font-bold text-slate-800">{idx + 1}. {s.name}</h3>
                       <div className="flex gap-2">
                         <button onClick={() => shareWA(s)} className="text-green-500 hover:text-green-600 p-2 bg-green-50 hover:bg-green-100 rounded-lg print:hidden flex items-center gap-2 text-sm font-bold transition-colors" title="Compartir WhatsApp"><Share2 size={16} /> WhatsApp</button>
-                        <button onClick={() => alert('Nota disciplinaria guardada para ' + s.name)} className="text-amber-500 hover:text-amber-600 p-2 bg-amber-50 hover:bg-amber-100 rounded-lg print:hidden transition-colors" title="Guardar"><Save size={16} /></button>
+                        <button onClick={() => handleSaveDiscipline(s.id)} className="text-amber-500 hover:text-amber-600 p-2 bg-amber-50 hover:bg-amber-100 rounded-lg print:hidden transition-colors" title="Guardar"><Save size={16} /></button>
                       </div>
                     </div>
                     <textarea placeholder="Escribir reporte de disciplina, amonestaciones, llamados de atención..." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none text-sm resize-y min-h-[80px] bg-white" value={observations[s.id] || ''} onChange={e => handleChangeText(s.id, e.target.value)}></textarea>
@@ -1649,9 +1759,19 @@
       const [recipient, setRecipient] = useState('docentes');
       const [message, setMessage] = useState('');
 
-      const sendComm = (e) => {
+      const sendComm = async (e) => {
         e.preventDefault();
-        setNotifications(prev => [{ id: Date.now(), to: recipient, message, date: new Date().toLocaleString() }, ...prev]);
+        const dateStr = new Date().toLocaleString();
+        if (USE_SUPABASE) {
+          const payload = { to_group: recipient, message, date: dateStr };
+          const { data } = await supabase.from('communications').insert([payload]).select();
+          if (data && data.length > 0) {
+            const newComm = { id: data[0].id, to: data[0].to_group, message: data[0].message, date: data[0].date };
+            setNotifications(prev => [newComm, ...prev]);
+          }
+        } else {
+          setNotifications(prev => [{ id: Date.now(), to: recipient, message, date: dateStr }, ...prev]);
+        }
         setMessage('');
         alert('Comunicado publicado exitosamente para: ' + recipient.toUpperCase());
       };
@@ -1700,6 +1820,11 @@
             
             const { data: usData } = await supabase.from('users').select('*');
             if (usData && usData.length > 0) setUsersData(usData);
+
+            const { data: commData } = await supabase.from('communications').select('*').order('id', { ascending: false });
+            if (commData && commData.length > 0) {
+              setNotifications(commData.map(c => ({ id: c.id, to: c.to_group, message: c.message, date: c.date })));
+            }
           } catch(e) {
             console.error("Error cargando Supabase: ", e);
           } finally {
