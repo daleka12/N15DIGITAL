@@ -20,7 +20,8 @@
       "imports": {
         "react": "https://esm.sh/react@18.2.0?dev",
         "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
-        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.0"
       }
     }
     </script>
@@ -38,6 +39,15 @@
   <script type="text/babel" data-type="module">
     import React, { useState, useEffect, useMemo } from 'react';
     import { createRoot } from 'react-dom/client';
+    import { createClient } from '@supabase/supabase-js';
+
+    // ==========================================
+    // CONFIGURACIÓN DE SUPABASE
+    // ==========================================
+    const SUPABASE_URL = 'https://diygdlfzzbhryrhwwkdq.supabase.co'; // <-- REEMPLAZAR
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeWdkbGZ6emJocnlyaHd3a2RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NzIyNjcsImV4cCI6MjA5MTM0ODI2N30.lnRadOJb42uXw6uXKmDW5Xj34hyW3urFXurF3b2HBlQ'; // <-- REEMPLAZAR
+    const USE_SUPABASE = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+    const supabase = USE_SUPABASE ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
     import {
       Users, BookOpen, GraduationCap, Calendar,
       LogOut, Menu, X, Save, Download, Share2,
@@ -366,6 +376,30 @@
       const [subjectName, setSubjectName] = useState('Matemática');
       const [teacherName, setTeacherName] = useState('Profesor/a');
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchGrades() {
+          const { data } = await supabase.from('grades').select('*').eq('subject', subjectName);
+          if (data) setGrades(data);
+        }
+        fetchGrades();
+      }, [subjectName]);
+
+      const handleSaveAllGrades = async () => {
+        if (!USE_SUPABASE) {
+          alert('Calificaciones guardadas localmente.');
+          return;
+        }
+        // Save to Supabase (using upsert based on unique studentId + subject)
+        const gradesToSave = grades.filter(g => g.subject === subjectName);
+        for (const grade of gradesToSave) {
+          const toSave = { "studentId": grade.studentId, subject: grade.subject, t1: grade.t1 || null, t2: grade.t2 || null, t3: grade.t3 || null, "recDic": grade.recDic || null, "recFeb": grade.recFeb || null };
+          if (grade.id) toSave.id = grade.id;
+          await supabase.from('grades').upsert(toSave, { onConflict: '"studentId", subject' });
+        }
+        alert('Calificaciones guardadas en la nube (Supabase).');
+      };
+
       const handleSaveStudent = (e) => {
         e.preventDefault();
         if (editingStudent) {
@@ -384,16 +418,16 @@
 
       const handleGradeChange = (studentId, term, value) => {
         const newGrades = [...grades];
-        const index = newGrades.findIndex(g => g.studentId === studentId && g.subject === 'Matemática');
+        const index = newGrades.findIndex(g => g.studentId === studentId && g.subject === subjectName);
 
         if (index >= 0) newGrades[index][term] = value;
-        else newGrades.push({ studentId, subject: 'Matemática', [term]: value });
+        else newGrades.push({ studentId, subject: subjectName, [term]: value });
 
         setGrades(newGrades);
       };
 
       const getGrade = (studentId, term) => {
-        const g = grades.find(x => x.studentId === studentId && x.subject === 'Matemática');
+        const g = grades.find(x => x.studentId === studentId && x.subject === subjectName);
         return g ? g[term] || '' : '';
       };
 
@@ -430,8 +464,9 @@
                 <input type="text" value={teacherName} onChange={e => setTeacherName(e.target.value)} className="text-slate-600 bg-transparent border-b border-slate-300 focus:border-amber-500 outline-none w-full sm:w-auto px-1 py-1" placeholder="Nombre del Docente" />
               </div>
             </div>
-            <div className="flex space-x-2 print:hidden">
-              <button onClick={() => { setEditingStudent(null); setStudentForm({ name: '' }); setShowStudentForm(true); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg bg-white border border-slate-200 shadow-sm font-bold flex items-center gap-1" title="Agregar Alumno"><Plus size={20} /><span className="text-sm hidden sm:inline">Alumno</span></button>
+            <div className="flex space-x-2 print:hidden items-center">
+              <button onClick={handleSaveAllGrades} className="p-2 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-lg font-bold flex items-center gap-1 shadow-sm" title="Guardar Notas"><Save size={20} /><span className="text-sm hidden sm:inline">Guardar Notas</span></button>
+              <button onClick={() => { setEditingStudent(null); setStudentForm({ name: '' }); setShowStudentForm(true); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg bg-white border border-slate-200 shadow-sm font-bold flex items-center gap-1" title="Agregar Alumno"><Plus size={20} /><span className="text-sm hidden md:inline">Alumno</span></button>
               <button onClick={exportPDF} className="p-2 text-slate-600 hover:bg-slate-200 rounded-lg bg-white border border-slate-200 shadow-sm" title="Imprimir/PDF"><Printer size={20} /></button>
               <button onClick={exportExcel} className="p-2 text-green-600 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="Excel"><FileText size={20} /></button>
               <button onClick={shareWA} className="p-2 text-green-500 hover:bg-green-100 rounded-lg bg-white border border-slate-200 shadow-sm" title="Compartir PDF por WhatsApp"><Share2 size={20} /></button>
@@ -535,6 +570,29 @@
       const [showUserForm, setShowUserForm] = useState(false);
       const today = new Date().toISOString().split('T')[0];
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchAttendance() {
+          const { data } = await supabase.from('attendance').select('*').eq('date', today);
+          if (data) setAttendanceData(data);
+        }
+        fetchAttendance();
+      }, [today]);
+
+      const handleSaveAttendance = async () => {
+        if (!USE_SUPABASE) {
+          alert('Asistencia guardada localmente.');
+          return;
+        }
+        const todayData = attendanceData.filter(a => a.date === today);
+        for (const record of todayData) {
+          const toSave = { "studentId": record.studentId, date: record.date, status: record.status };
+          if (record.id) toSave.id = record.id;
+          await supabase.from('attendance').upsert(toSave, { onConflict: '"studentId", date' });
+        }
+        alert('Asistencia guardada en Supabase.');
+      };
+
       const toggleAttendance = (itemId) => {
         const existingIdx = attendanceData.findIndex(a => a.studentId === itemId && a.date === today);
         let newStatus = 'P';
@@ -631,7 +689,7 @@
               {selectedRole === 'teacher' && (
                 <button onClick={() => { setEditingUser(null); setEditName(''); setShowUserForm(true); }} className="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm">+ Docente</button>
               )}
-              <button className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-bold">
+              <button onClick={handleSaveAttendance} className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-bold">
                 <Save size={18} /> Guardar
               </button>
             </div>
@@ -678,16 +736,40 @@
       const [showForm, setShowForm] = useState(false);
       const [newTopic, setNewTopic] = useState({ date: new Date().toISOString().split('T')[0], teacher: '', subject: '', topic: '', observations: '' });
 
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchTopics() {
+          const { data } = await supabase.from('topics')
+            .select('*')
+            .eq('year', selectedYear)
+            .eq('sectionId', selectedSection);
+          if (data) setTopics(data);
+        }
+        fetchTopics();
+      }, [selectedYear, selectedSection]);
+
       const filteredTopics = topics.filter(t => t.year === selectedYear && t.sectionId === selectedSection);
 
-      const handleAdd = (e) => {
+      const handleAdd = async (e) => {
         e.preventDefault();
-        setTopics([{
-          id: Date.now(),
+        const payload = {
           year: selectedYear,
           sectionId: selectedSection,
           ...newTopic
-        }, ...topics]);
+        };
+
+        if (USE_SUPABASE) {
+          const { data, error } = await supabase.from('topics').insert([payload]);
+          if (error) {
+             console.error(error);
+             alert('Error al guardar en Supabase');
+             return;
+          }
+          const { data: newData } = await supabase.from('topics').select('*').eq('year', selectedYear).eq('sectionId', selectedSection);
+          if (newData) setTopics(newData);
+        } else {
+          setTopics([{ id: Date.now(), ...payload }, ...topics]);
+        }
         setShowForm(false);
         setNewTopic({ date: new Date().toISOString().split('T')[0], teacher: '', subject: '', topic: '', observations: '' });
       };
@@ -930,12 +1012,24 @@
 
       const filteredStudents = students.filter(s => s.year === selectedYear && s.sectionId === selectedSection && s.name.toLowerCase().includes(filter.toLowerCase()));
 
-      const handleSave = (e) => {
+      const handleSave = async (e) => {
         e.preventDefault();
-        if (editingStudent) {
-          setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: formData.name, document: formData.document, phone: formData.phone } : s));
+        const studentInfo = { name: formData.name, document: formData.document, phone: formData.phone, year: selectedYear, sectionId: selectedSection };
+        
+        if (USE_SUPABASE) {
+          if (editingStudent) {
+            await supabase.from('students').update(studentInfo).eq('id', editingStudent.id);
+          } else {
+            await supabase.from('students').insert([studentInfo]);
+          }
+          const { data } = await supabase.from('students').select('*');
+          if (data) setStudents(data);
         } else {
-          setStudents([...students, { id: Date.now(), name: formData.name, document: formData.document, phone: formData.phone, year: selectedYear, sectionId: selectedSection }]);
+          if (editingStudent) {
+            setStudents(students.map(s => s.id === editingStudent.id ? { ...s, ...studentInfo } : s));
+          } else {
+            setStudents([...students, { id: Date.now(), ...studentInfo }]);
+          }
         }
         setShowForm(false);
         setEditingStudent(null);
@@ -948,8 +1042,11 @@
         setShowForm(true);
       };
 
-      const handleDelete = (id) => {
+      const handleDelete = async (id) => {
         if (confirm("¿Está seguro de eliminar a este alumno?")) {
+          if (USE_SUPABASE) {
+            await supabase.from('students').delete().eq('id', id);
+          }
           setStudents(students.filter(s => s.id !== id));
         }
       };
@@ -1499,6 +1596,27 @@
       const [students, setStudents] = useState(MOCK_STUDENTS);
       const [usersData, setUsersData] = useState(MOCK_USERS);
       const [notifications, setNotifications] = useState([]);
+      const [loading, setLoading] = useState(USE_SUPABASE);
+
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function loadData() {
+          try {
+            const { data: stData } = await supabase.from('students').select('*');
+            if (stData && stData.length > 0) setStudents(stData);
+            
+            const { data: usData } = await supabase.from('users').select('*');
+            if (usData && usData.length > 0) setUsersData(usData);
+          } catch(e) {
+            console.error("Error cargando Supabase: ", e);
+          } finally {
+            setLoading(false);
+          }
+        }
+        loadData();
+      }, []);
+
+      if (loading) return <div className="flex bg-slate-900 justify-center items-center h-screen text-amber-500 font-bold text-xl">Conectando a Supabase...</div>;
 
       if (!user) {
         return <LoginScreen onLogin={setUser} />;
