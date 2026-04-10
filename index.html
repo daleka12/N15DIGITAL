@@ -1319,9 +1319,26 @@
       const [title, setTitle] = useState('');
       const [content, setContent] = useState('');
 
-      const handleAddDoc = (e) => {
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchDocs() {
+          const { data } = await supabase.from('official_docs').select('*').order('id', { ascending: false });
+          if (data) setDocs(data);
+        }
+        fetchDocs();
+      }, []);
+
+      const handleAddDoc = async (e) => {
         e.preventDefault();
-        setDocs([{ id: Date.now(), title, content, date: new Date().toISOString().split('T')[0] }, ...docs]);
+        const docPayload = { title, content, date: new Date().toISOString().split('T')[0] };
+        
+        if (USE_SUPABASE) {
+          await supabase.from('official_docs').insert([docPayload]);
+          const { data } = await supabase.from('official_docs').select('*').order('id', { ascending: false });
+          if (data) setDocs(data);
+        } else {
+          setDocs([{ id: Date.now(), ...docPayload }, ...docs]);
+        }
         setTitle('');
         setContent('');
       };
@@ -1356,10 +1373,37 @@
       const [enrollments, setEnrollments] = useState([]);
       const [formData, setFormData] = useState({ name: '', document: '', phone: '', email: '' });
 
-      const handleSave = (e) => {
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchEnrolls() {
+          const { data } = await supabase.from('enrollments').select('*').order('id', { ascending: false });
+          if (data) setEnrollments(data);
+        }
+        fetchEnrolls();
+      }, []);
+
+      const handleSave = async (e) => {
         e.preventDefault();
-        setEnrollments([{ id: Date.now(), ...formData, status: 'Pendiente' }, ...enrollments]);
+        const payload = { ...formData, status: 'Pendiente' };
+        if (USE_SUPABASE) {
+          await supabase.from('enrollments').insert([payload]);
+          const { data } = await supabase.from('enrollments').select('*').order('id', { ascending: false });
+          if (data) setEnrollments(data);
+        } else {
+          setEnrollments([{ id: Date.now(), ...payload }, ...enrollments]);
+        }
         setFormData({ name: '', document: '', phone: '', email: '' });
+      };
+
+      const toggleStatus = async (e) => {
+        const newStatus = e.status === 'Pendiente' ? 'Matriculado' : 'Pendiente';
+        if (USE_SUPABASE && e.id) {
+          await supabase.from('enrollments').update({ status: newStatus }).eq('id', e.id);
+          const { data } = await supabase.from('enrollments').select('*').order('id', { ascending: false });
+          if (data) setEnrollments(data);
+        } else {
+          setEnrollments(enrollments.map(en => en.id === e.id ? { ...en, status: newStatus } : en));
+        }
       };
 
       return (
@@ -1392,9 +1436,9 @@
                         <td className="px-4 py-3 text-slate-600">{e.document}</td>
                         <td className="px-4 py-3 text-slate-600">{e.phone} {e.email && `| ${e.email}`}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer select-none transition-colors ${e.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`} onClick={() => {
-                            setEnrollments(enrollments.map(en => en.id === e.id ? { ...en, status: en.status === 'Pendiente' ? 'Matriculado' : 'Pendiente' } : en));
-                          }}>{e.status}</span>
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer select-none transition-colors ${e.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`} onClick={() => toggleStatus(e)}>
+                            {e.status}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -1410,15 +1454,38 @@
       const [licenses, setLicenses] = useState([]);
       const [formData, setFormData] = useState({ firstName: '', lastName: '', document: '', address: '', phone: '' });
 
-      const handleSave = (e) => {
+      useEffect(() => {
+        if (!USE_SUPABASE) return;
+        async function fetchLicenses() {
+          const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
+          if (data) setLicenses(data);
+        }
+        fetchLicenses();
+      }, []);
+
+      const handleSave = async (e) => {
         e.preventDefault();
-        setLicenses([{ id: Date.now(), ...formData, status: 'Pendiente' }, ...licenses]);
+        const payload = { firstName: formData.firstName, lastName: formData.lastName, document: formData.document, address: formData.address, phone: formData.phone, status: 'Pendiente' };
+        
+        if (USE_SUPABASE) {
+          await supabase.from('licenses').insert([payload]);
+          const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
+          if (data) setLicenses(data);
+        } else {
+          setLicenses([{ id: Date.now(), ...payload }, ...licenses]);
+        }
         setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' });
-        alert('Simulación: El PDF se adjuntó correctamente a la solicitud.');
+        alert('La solicitud se adjuntó correctamente.');
       };
 
-      const updateStatus = (id, newStatus) => {
-        setLicenses(licenses.map(lic => lic.id === id ? { ...lic, status: newStatus } : lic));
+      const updateStatus = async (id, newStatus) => {
+        if (USE_SUPABASE) {
+          await supabase.from('licenses').update({ status: newStatus }).eq('id', id);
+          const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
+          if (data) setLicenses(data);
+        } else {
+          setLicenses(licenses.map(lic => lic.id === id ? { ...lic, status: newStatus } : lic));
+        }
       };
 
       return (
