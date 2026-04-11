@@ -734,7 +734,13 @@
                   await supabase.from('users').insert([payload]);
                 }
                 const { data } = await supabase.from('users').select('*');
-                if (data) setUsersData(data);
+                if (data && data.length > 0) {
+                  setUsersData(data);
+                } else {
+                  // Si Supabase devuelve vacío (por ej. estamos editando un Mock pero no existe en DB)
+                  if (editingUser) setUsersData(usersData.map(u => u.id === editingUser.id ? { ...u, name: editName } : u));
+                  else setUsersData([...usersData, { id: Date.now(), name: editName, role: selectedRole }]);
+                }
               } else {
                 if (editingUser) setUsersData(usersData.map(u => u.id === editingUser.id ? { ...u, name: editName } : u));
                 else setUsersData([...usersData, { id: Date.now(), name: editName, role: selectedRole }]);
