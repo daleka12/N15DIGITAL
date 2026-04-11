@@ -644,6 +644,21 @@
         return Math.round((presents / records.length) * 100);
       };
 
+      const handleDeleteUser = async (id) => {
+        if (!confirm("¿Eliminar este usuario de forma permanente?")) return;
+        if (USE_SUPABASE) {
+          const { error } = await supabase.from('users').delete().eq('id', id);
+          if (error) {
+            alert('Error al eliminar: ' + error.message);
+            return;
+          }
+          const { data } = await supabase.from('users').select('*');
+          setUsersData(data && data.length > 0 ? data : usersData.filter(u => u.id !== id));
+        } else {
+          setUsersData(usersData.filter(u => u.id !== id));
+        }
+      };
+
       const renderList = () => {
         let list = [];
         if (selectedRole === 'students') {
@@ -665,10 +680,10 @@
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-slate-800">{item.name}</h3>
                   {selectedRole !== 'students' && selectedRole !== 'admin' && (
-                    <button onClick={() => { setEditingUser(item); setEditName(item.name); setShowUserForm(true); }} className="text-slate-400 hover:text-amber-500"><Edit size={14} /></button>
-                  )}
-                  {selectedRole === 'teacher' && (
-                    <button onClick={() => { if (confirm("¿Eliminar docente?")) setUsersData(usersData.filter(u => u.id !== item.id)); }} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                    <>
+                      <button onClick={() => { setEditingUser(item); setEditName(item.name); setShowUserForm(true); }} className="text-slate-400 hover:text-amber-500"><Edit size={14} /></button>
+                      <button onClick={() => handleDeleteUser(item.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                    </>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
