@@ -1863,7 +1863,11 @@
             if (stData && stData.length > 0) setStudents(stData);
             
             const { data: usData } = await supabase.from('users').select('*');
-            if (usData && usData.length > 0) setUsersData(usData);
+            if (usData && usData.length > 0) {
+               const dbIds = new Set(usData.map(d => d.id));
+               const merged = MOCK_USERS.filter(u => !dbIds.has(u.id));
+               setUsersData([...merged, ...usData]);
+            }
 
             const { data: commData } = await supabase.from('communications').select('*').order('id', { ascending: false });
             if (commData && commData.length > 0) {
