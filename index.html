@@ -710,8 +710,8 @@
               )}
             </div>
             <div className="flex items-center gap-4">
-              {selectedRole === 'teacher' && (
-                <button onClick={() => { setEditingUser(null); setEditName(''); setShowUserForm(true); }} className="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm">+ Docente</button>
+              {selectedRole !== 'students' && (
+                <button onClick={() => { setEditingUser(null); setEditName(''); setShowUserForm(true); }} className="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-sm">+ Agregar</button>
               )}
               <button onClick={handleSaveAttendance} className="bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-md px-6 py-3 rounded-lg flex items-center gap-2 text-sm font-bold">
                 <Save size={18} /> Guardar
@@ -724,20 +724,30 @@
               e.preventDefault();
               const payload = { name: editName, role: selectedRole };
               if (USE_SUPABASE) {
+                let err = null;
                 if (editingUser) {
-                  await supabase.from('users').update(payload).eq('id', editingUser.id);
+                  const res = await supabase.from('users').update(payload).eq('id', editingUser.id);
+                  err = res.error;
                 } else {
-                  // We need to provide dummy username and password for users since table requires it
                   const randomCode = Math.floor(Math.random() * 1000);
                   payload.username = `${selectedRole}_${randomCode}`;
                   payload.password = `pass_${randomCode}`;
-                  await supabase.from('users').insert([payload]);
+                  const res = await supabase.from('users').insert([payload]);
+                  err = res.error;
+                }
+                if (err) {
+                  console.warn("Fallo de Supabase (posiblemente mock user): ", err);
                 }
                 const { data } = await supabase.from('users').select('*');
                 if (data && data.length > 0) {
-                  setUsersData(data);
+                  // Mezclamos DB real con los Mocks para que no se borren de la vista
+                  const dbIds = new Set(data.map(d => d.id));
+                  const mergedMocks = usersData.filter(u => !dbIds.has(u.id)).map(u => {
+                    if (editingUser && u.id === editingUser.id) return { ...u, name: editName };
+                    return u;
+                  });
+                  setUsersData([...mergedMocks, ...data]);
                 } else {
-                  // Si Supabase devuelve vacío (por ej. estamos editando un Mock pero no existe en DB)
                   if (editingUser) setUsersData(usersData.map(u => u.id === editingUser.id ? { ...u, name: editName } : u));
                   else setUsersData([...usersData, { id: Date.now(), name: editName, role: selectedRole }]);
                 }
