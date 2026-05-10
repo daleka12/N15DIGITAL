@@ -1612,6 +1612,8 @@
       const [docs, setDocs] = useState([]);
       const [title, setTitle] = useState('');
       const [content, setContent] = useState('');
+      const [fileData, setFileData] = useState(null);
+      const [fileName, setFileName] = useState('');
 
       useEffect(() => {
         if (!USE_SUPABASE) return;
@@ -1622,9 +1624,20 @@
         fetchDocs();
       }, []);
 
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setFileName(file.name);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setFileData(event.target.result);
+        };
+        reader.readAsDataURL(file);
+      };
+
       const handleAddDoc = async (e) => {
         e.preventDefault();
-        const docPayload = { title, content, date: new Date().toISOString().split('T')[0] };
+        const docPayload = { title, content, fileData, fileName, date: new Date().toISOString().split('T')[0] };
         
         if (USE_SUPABASE) {
           await supabase.from('official_docs').insert([docPayload]);
@@ -1635,6 +1648,21 @@
         }
         setTitle('');
         setContent('');
+        setFileData(null);
+        setFileName('');
+      };
+
+      const viewDocument = (fileData) => {
+        const newWindow = window.open();
+        if (newWindow) {
+          if (fileData.startsWith('data:application/pdf')) {
+            newWindow.document.write(`<iframe src="${fileData}" style="width:100%;height:100vh;border:none;"></iframe>`);
+          } else {
+            newWindow.document.write(`<html><body style="margin:0;display:flex;justify-content:center;align-items:center;background:#0f172a;min-height:100vh;"><img src="${fileData}" style="max-width:100%;max-height:100vh;" /></body></html>`);
+          }
+        } else {
+          alert('Por favor, permite ventanas emergentes para ver el documento.');
+        }
       };
 
       return (
@@ -1643,19 +1671,49 @@
           <form onSubmit={handleAddDoc} className="bg-white p-6 rounded-xl border border-slate-200 flex flex-col gap-4 shadow-sm">
             <input required type="text" placeholder="Título del Documento o Acta" className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={title} onChange={e => setTitle(e.target.value)} />
             <textarea required placeholder="Escribir contenido..." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none h-32" value={content} onChange={e => setContent(e.target.value)}></textarea>
-            <div className="flex justify-between items-center">
-              <button type="button" onClick={() => alert('Simulación: Se abriría cuadro de sistema para elegir foto/PDF.')} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex gap-2">Subir Foto/PDF</button>
-              <button type="submit" className="bg-amber-500 text-slate-900 font-bold px-6 py-2 rounded-lg shadow-sm">Guardar Documento</button>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input 
+                  type="file" 
+                  accept="image/*,.pdf" 
+                  className="hidden" 
+                  id="official-doc-upload" 
+                  onChange={handleFileUpload} 
+                />
+                <button type="button" onClick={() => document.getElementById('official-doc-upload').click()} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+                  <Plus size={16} /> Subir Foto/PDF
+                </button>
+                {fileName && (
+                  <span className="text-sm text-slate-600 truncate max-w-[150px] sm:max-w-[200px]" title={fileName}>
+                    {fileName}
+                    <button type="button" onClick={() => {setFileData(null); setFileName(''); document.getElementById('official-doc-upload').value = ''}} className="text-red-500 ml-2 hover:text-red-700">
+                      <XCircle size={14} className="inline" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-6 py-2 rounded-lg shadow-sm transition-colors">Guardar Documento</button>
             </div>
           </form>
           <div className="grid gap-4">
+            {docs.length === 0 && <p className="text-slate-500 text-center py-4 bg-white rounded-xl border border-slate-200">No hay documentos registrados.</p>}
             {docs.map(d => (
-              <div key={d.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-bold text-slate-800">{d.title}</h3>
-                  <span className="text-sm text-slate-500">{d.date}</span>
+              <div key={d.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-bold text-slate-800 text-lg">{d.title}</h3>
+                    <span className="text-sm text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded-md">{d.date}</span>
+                  </div>
+                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{d.content}</p>
                 </div>
-                <p className="text-sm text-slate-600 whitespace-pre-wrap">{d.content}</p>
+                {d.fileData && (
+                  <button 
+                    onClick={() => viewDocument(d.fileData)} 
+                    className="flex-shrink-0 flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-2 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto justify-center"
+                  >
+                    <FileText size={16} /> Ver Adjunto
+                  </button>
+                )}
               </div>
             ))}
           </div>
