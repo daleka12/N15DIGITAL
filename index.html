@@ -1724,6 +1724,7 @@
     const EnrollmentsModule = () => {
       const [enrollments, setEnrollments] = useState([]);
       const [formData, setFormData] = useState({ name: '', document: '', phone: '', email: '' });
+      const [editingId, setEditingId] = useState(null);
 
       useEffect(() => {
         if (!USE_SUPABASE) return;
@@ -1736,15 +1737,48 @@
 
       const handleSave = async (e) => {
         e.preventDefault();
-        const payload = { ...formData, status: 'Pendiente' };
+        
+        if (editingId) {
+          if (USE_SUPABASE) {
+            await supabase.from('enrollments').update({ name: formData.name, document: formData.document, phone: formData.phone, email: formData.email }).eq('id', editingId);
+            const { data } = await supabase.from('enrollments').select('*').order('id', { ascending: false });
+            if (data) setEnrollments(data);
+          } else {
+            setEnrollments(enrollments.map(en => en.id === editingId ? { ...en, ...formData } : en));
+          }
+          setEditingId(null);
+        } else {
+          const payload = { ...formData, status: 'Pendiente' };
+          if (USE_SUPABASE) {
+            await supabase.from('enrollments').insert([payload]);
+            const { data } = await supabase.from('enrollments').select('*').order('id', { ascending: false });
+            if (data) setEnrollments(data);
+          } else {
+            setEnrollments([{ id: Date.now(), ...payload }, ...enrollments]);
+          }
+        }
+        setFormData({ name: '', document: '', phone: '', email: '' });
+      };
+
+      const handleEdit = (enrollment) => {
+        setFormData({ name: enrollment.name, document: enrollment.document, phone: enrollment.phone, email: enrollment.email || '' });
+        setEditingId(enrollment.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      const handleDelete = async (id) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta inscripción?')) return;
         if (USE_SUPABASE) {
-          await supabase.from('enrollments').insert([payload]);
+          await supabase.from('enrollments').delete().eq('id', id);
           const { data } = await supabase.from('enrollments').select('*').order('id', { ascending: false });
           if (data) setEnrollments(data);
         } else {
-          setEnrollments([{ id: Date.now(), ...payload }, ...enrollments]);
+          setEnrollments(enrollments.filter(en => en.id !== id));
         }
-        setFormData({ name: '', document: '', phone: '', email: '' });
+        if (editingId === id) {
+          setEditingId(null);
+          setFormData({ name: '', document: '', phone: '', email: '' });
+        }
       };
 
       const toggleStatus = async (e) => {
@@ -1762,12 +1796,23 @@
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <h2 className="text-2xl font-bold text-slate-800">Matrículas e Inscripciones</h2>
           <form onSubmit={handleSave} className="bg-white p-6 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
-            <h3 className="col-span-full font-bold text-slate-800 mb-2">Nueva Solicitud de Inscripción</h3>
+            <h3 className="col-span-full font-bold text-slate-800 mb-2">
+              {editingId ? 'Editar Inscripción' : 'Nueva Solicitud de Inscripción'}
+            </h3>
             <input required type="text" placeholder="Apellido, Nombre del Alumno" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
             <input required type="text" placeholder="N° Documento" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.document} onChange={e => setFormData({ ...formData, document: e.target.value })} />
             <input required type="text" placeholder="Teléfono de Contacto" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
             <input type="email" placeholder="Correo Electrónico (Opcional)" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-            <button type="submit" className="col-span-full mt-2 bg-amber-500 text-slate-900 font-bold px-6 py-3 rounded-lg shadow-sm">Registrar Inscripción</button>
+            <div className="col-span-full mt-2 flex gap-2">
+              <button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-6 py-3 rounded-lg shadow-sm transition-colors">
+                {editingId ? 'Guardar Cambios' : 'Registrar Inscripción'}
+              </button>
+              {editingId && (
+                <button type="button" onClick={() => { setEditingId(null); setFormData({ name: '', document: '', phone: '', email: '' }); }} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-6 py-3 rounded-lg shadow-sm transition-colors">
+                  Cancelar
+                </button>
+              )}
+            </div>
           </form>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -1778,12 +1823,13 @@
                     <th className="px-4 py-3">Documento</th>
                     <th className="px-4 py-3">Contacto</th>
                     <th className="px-4 py-3 text-center">Estado</th>
+                    <th className="px-4 py-3 text-center w-24">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {enrollments.length === 0 ? <tr><td colSpan="4" className="text-center py-8 text-slate-500">No hay inscripciones registradas.</td></tr> :
+                  {enrollments.length === 0 ? <tr><td colSpan="5" className="text-center py-8 text-slate-500">No hay inscripciones registradas.</td></tr> :
                     enrollments.map(e => (
-                      <tr key={e.id} className="hover:bg-slate-50">
+                      <tr key={e.id} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-4 py-3 font-medium text-slate-800">{e.name}</td>
                         <td className="px-4 py-3 text-slate-600">{e.document}</td>
                         <td className="px-4 py-3 text-slate-600">{e.phone} {e.email && `| ${e.email}`}</td>
@@ -1791,6 +1837,12 @@
                           <span className={`text-xs font-bold px-3 py-1 rounded-full cursor-pointer select-none transition-colors ${e.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`} onClick={() => toggleStatus(e)}>
                             {e.status}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex gap-2 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEdit(e)} className="p-1.5 bg-slate-100 hover:bg-amber-100 text-slate-500 hover:text-amber-600 rounded-lg transition-colors" title="Editar"><Edit size={16} /></button>
+                            <button onClick={() => handleDelete(e.id)} className="p-1.5 bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 rounded-lg transition-colors" title="Eliminar"><Trash2 size={16} /></button>
+                          </div>
                         </td>
                       </tr>
                     ))}
