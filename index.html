@@ -1857,6 +1857,9 @@
     const LicensesModule = () => {
       const [licenses, setLicenses] = useState([]);
       const [formData, setFormData] = useState({ firstName: '', lastName: '', document: '', address: '', phone: '' });
+      const [editingId, setEditingId] = useState(null);
+      const [fileData, setFileData] = useState(null);
+      const [fileName, setFileName] = useState('');
 
       useEffect(() => {
         if (!USE_SUPABASE) return;
@@ -1867,19 +1870,82 @@
         fetchLicenses();
       }, []);
 
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setFileName(file.name);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setFileData(event.target.result);
+        };
+        reader.readAsDataURL(file);
+      };
+
       const handleSave = async (e) => {
         e.preventDefault();
-        const payload = { firstName: formData.firstName, lastName: formData.lastName, document: formData.document, address: formData.address, phone: formData.phone, status: 'Pendiente' };
         
+        if (editingId) {
+          if (USE_SUPABASE) {
+            await supabase.from('licenses').update({ ...formData, fileData, fileName }).eq('id', editingId);
+            const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
+            if (data) setLicenses(data);
+          } else {
+            setLicenses(licenses.map(lic => lic.id === editingId ? { ...lic, ...formData, fileData, fileName } : lic));
+          }
+          setEditingId(null);
+          alert('La licencia se modificó correctamente.');
+        } else {
+          const payload = { ...formData, fileData, fileName, status: 'Pendiente' };
+          if (USE_SUPABASE) {
+            await supabase.from('licenses').insert([payload]);
+            const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
+            if (data) setLicenses(data);
+          } else {
+            setLicenses([{ id: Date.now(), ...payload }, ...licenses]);
+          }
+          alert('La solicitud se adjuntó correctamente.');
+        }
+        setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' });
+        setFileData(null);
+        setFileName('');
+      };
+
+      const handleEdit = (lic) => {
+        setFormData({ firstName: lic.firstName, lastName: lic.lastName, document: lic.document, address: lic.address, phone: lic.phone });
+        setFileData(lic.fileData || null);
+        setFileName(lic.fileName || '');
+        setEditingId(lic.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      const handleDelete = async (id) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta licencia?')) return;
         if (USE_SUPABASE) {
-          await supabase.from('licenses').insert([payload]);
+          await supabase.from('licenses').delete().eq('id', id);
           const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
           if (data) setLicenses(data);
         } else {
-          setLicenses([{ id: Date.now(), ...payload }, ...licenses]);
+          setLicenses(licenses.filter(lic => lic.id !== id));
         }
-        setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' });
-        alert('La solicitud se adjuntó correctamente.');
+        if (editingId === id) {
+          setEditingId(null);
+          setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' });
+          setFileData(null);
+          setFileName('');
+        }
+      };
+
+      const viewDocument = (fileData) => {
+        const newWindow = window.open();
+        if (newWindow) {
+          if (fileData.startsWith('data:application/pdf')) {
+            newWindow.document.write(`<iframe src="${fileData}" style="width:100%;height:100vh;border:none;"></iframe>`);
+          } else {
+            newWindow.document.write(`<html><body style="margin:0;display:flex;justify-content:center;align-items:center;background:#0f172a;min-height:100vh;"><img src="${fileData}" style="max-width:100%;max-height:100vh;" /></body></html>`);
+          }
+        } else {
+          alert('Por favor, permite ventanas emergentes para ver el documento.');
+        }
       };
 
       const updateStatus = async (id, newStatus) => {
@@ -1896,15 +1962,45 @@
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
           <h2 className="text-2xl font-bold text-slate-800">Licencias Docentes</h2>
           <form onSubmit={handleSave} className="bg-white p-6 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
-            <h3 className="col-span-full font-bold text-slate-800 mb-2">Cargar Nueva Solicitud de Licencia</h3>
+            <h3 className="col-span-full font-bold text-slate-800 mb-2">
+              {editingId ? 'Editar Solicitud de Licencia' : 'Cargar Nueva Solicitud de Licencia'}
+            </h3>
             <input required type="text" placeholder="Nombre" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} />
             <input required type="text" placeholder="Apellido" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} />
             <input required type="text" placeholder="N° Documento" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.document} onChange={e => setFormData({ ...formData, document: e.target.value })} />
             <input required type="text" placeholder="N° Celular" className="p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
             <input required type="text" placeholder="Dirección" className="col-span-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 outline-none" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
             <div className="col-span-full flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 gap-4">
-              <button type="button" className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg text-sm font-bold flex gap-2 w-fit border border-slate-200 shadow-sm" onClick={() => alert('Simulación: Diálogo de selección de archivo PDF para adjuntar certificado.')}>Adjuntar Certificado (PDF)</button>
-              <button type="submit" className="bg-amber-500 text-slate-900 font-bold px-8 py-3 rounded-lg shadow-sm w-full sm:w-auto">Agregar Licencia</button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input 
+                  type="file" 
+                  accept="image/*,.pdf" 
+                  className="hidden" 
+                  id="license-doc-upload" 
+                  onChange={handleFileUpload} 
+                />
+                <button type="button" className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2 w-fit border border-slate-200 shadow-sm transition-colors" onClick={() => document.getElementById('license-doc-upload').click()}>
+                  <Plus size={16} /> Adjuntar Certificado (PDF/Foto)
+                </button>
+                {fileName && (
+                  <span className="text-sm text-slate-600 truncate max-w-[150px] sm:max-w-[200px]" title={fileName}>
+                    {fileName}
+                    <button type="button" onClick={() => {setFileData(null); setFileName(''); document.getElementById('license-doc-upload').value = ''}} className="text-red-500 ml-2 hover:text-red-700">
+                      <XCircle size={14} className="inline" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button type="submit" className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-8 py-3 rounded-lg shadow-sm transition-colors">
+                  {editingId ? 'Guardar Cambios' : 'Agregar Licencia'}
+                </button>
+                {editingId && (
+                  <button type="button" onClick={() => { setEditingId(null); setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' }); setFileData(null); setFileName(''); }} className="flex-1 sm:flex-none bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-3 rounded-lg shadow-sm transition-colors">
+                    Cancelar
+                  </button>
+                )}
+              </div>
             </div>
           </form>
 
@@ -1913,10 +2009,20 @@
               licenses.map(lic => (
                 <div key={lic.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                   <div className="flex-1">
-                    <h3 className="font-bold text-slate-800 text-lg">{lic.lastName}, {lic.firstName}</h3>
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-bold text-slate-800 text-lg">{lic.lastName}, {lic.firstName}</h3>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(lic)} className="p-1.5 bg-slate-100 hover:bg-amber-100 text-slate-500 hover:text-amber-600 rounded-lg transition-colors" title="Editar"><Edit size={16} /></button>
+                        <button onClick={() => handleDelete(lic.id)} className="p-1.5 bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-600 rounded-lg transition-colors" title="Eliminar"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
                     <p className="text-sm text-slate-500 mt-1">DNI: <span className="font-semibold text-slate-700">{lic.document}</span> | Celular: {lic.phone}</p>
                     <p className="text-sm text-slate-500">Dirección: {lic.address}</p>
-                    <div className="mt-2 text-sm text-amber-600 font-bold underline cursor-pointer hover:text-amber-700 w-fit" onClick={() => alert('Simulación: Abriendo PDF visualizador.')}>Ver PDF adjunto</div>
+                    {lic.fileData && (
+                      <button onClick={() => viewDocument(lic.fileData)} className="mt-2 text-sm text-amber-600 font-bold underline cursor-pointer hover:text-amber-700 w-fit bg-transparent border-none p-0 flex items-center gap-1">
+                        <FileText size={16} /> Ver Certificado adjunto
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-col items-start md:items-center gap-2">
                     {lic.status === 'Pendiente' ? (
