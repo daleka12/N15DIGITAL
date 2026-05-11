@@ -1640,7 +1640,13 @@
         const docPayload = { title, content, fileData, fileName, date: new Date().toISOString().split('T')[0] };
         
         if (USE_SUPABASE) {
-          await supabase.from('official_docs').insert([docPayload]);
+          const { error } = await supabase.from('official_docs').insert([docPayload]);
+          if (error) {
+            console.error('Supabase error:', error);
+            alert('Aviso: Hubo un error al guardar el archivo en la nube (' + error.message + '). Asegúrate de que las columnas "fileData" y "fileName" existan en tu tabla de Supabase (tipo TEXT). Se intentará guardar el documento sin el archivo adjunto.');
+            const payloadNoFile = { title, content, date: docPayload.date };
+            await supabase.from('official_docs').insert([payloadNoFile]);
+          }
           const { data } = await supabase.from('official_docs').select('*').order('id', { ascending: false });
           if (data) setDocs(data);
         } else {
@@ -1886,24 +1892,35 @@
         
         if (editingId) {
           if (USE_SUPABASE) {
-            await supabase.from('licenses').update({ ...formData, fileData, fileName }).eq('id', editingId);
+            const { error } = await supabase.from('licenses').update({ ...formData, fileData, fileName }).eq('id', editingId);
+            if (error) {
+              console.error('Supabase error:', error);
+              alert('Aviso: Hubo un error al guardar el archivo en la nube (' + error.message + '). Asegúrate de que las columnas "fileData" y "fileName" existan en tu tabla de Supabase (tipo TEXT). Se guardarán los datos sin el archivo.');
+              await supabase.from('licenses').update({ ...formData }).eq('id', editingId);
+            }
             const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
             if (data) setLicenses(data);
           } else {
             setLicenses(licenses.map(lic => lic.id === editingId ? { ...lic, ...formData, fileData, fileName } : lic));
           }
           setEditingId(null);
-          alert('La licencia se modificó correctamente.');
+          alert('La licencia se guardó correctamente.');
         } else {
           const payload = { ...formData, fileData, fileName, status: 'Pendiente' };
           if (USE_SUPABASE) {
-            await supabase.from('licenses').insert([payload]);
+            const { error } = await supabase.from('licenses').insert([payload]);
+            if (error) {
+              console.error('Supabase error:', error);
+              alert('Aviso: Hubo un error al guardar el archivo en la nube (' + error.message + '). Asegúrate de que las columnas "fileData" y "fileName" existan en tu tabla de Supabase (tipo TEXT). Se guardarán los datos sin el archivo.');
+              const payloadNoFile = { ...formData, status: 'Pendiente' };
+              await supabase.from('licenses').insert([payloadNoFile]);
+            }
             const { data } = await supabase.from('licenses').select('*').order('id', { ascending: false });
             if (data) setLicenses(data);
           } else {
             setLicenses([{ id: Date.now(), ...payload }, ...licenses]);
           }
-          alert('La solicitud se adjuntó correctamente.');
+          alert('La solicitud se guardó correctamente.');
         }
         setFormData({ firstName: '', lastName: '', document: '', address: '', phone: '' });
         setFileData(null);
